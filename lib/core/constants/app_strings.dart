@@ -1,0 +1,40 @@
+import 'package:get/get.dart';
+
+class AppStrings {
+  static String get appName => 'appName'.tr;
+  static String get login => 'login'.tr;
+  static String get welcome => 'welcome'.tr;
+  static String get enterEmailOrPhone => 'enterEmailOrPhone'.tr;
+  static String get sendOtp => 'sendOtp'.tr;
+  static String get verifyOtp => 'verifyOtp'.tr;
+  static String get verifyCode => 'verifyCode'.tr;
+  static String get otpHint => 'otpHint'.tr;
+  static String get resendCode => 'resendCode'.tr;
+  static String get homePage => 'homePage'.tr;
+  static String get shipments => 'shipments'.tr;
+  static String get summary => 'summary'.tr;
+  static String get typePayment => 'typePayment'.tr;
+  static String get trackingId => 'trackingId'.tr;
+  static String get contentItems => 'contentItems'.tr;
+  static String get paymentOptions => 'paymentOptions'.tr;
+  static String get markUndelivered => 'markUndelivered'.tr;
+  static String get collectCash => 'collectCash'.tr;
+  static String get qrCodeScan => 'qrCodeScan'.tr;
+  static String get customerScanToPay => 'customerScanToPay'.tr;
+  static String get cashPaymentDoorstep => 'cashPaymentDoorstep'.tr;
+  static String get paymentPending => 'paymentPending'.tr;
+  static String get recountCashInfo => 'recountCashInfo'.tr;
+  static String get tryAnotherPayment => 'tryAnotherPayment'.tr;
+  static String get confirmPayment => 'confirmPayment'.tr;
+  static String get noInternet => 'noInternet'.tr;
+  static String get checkNetwork => 'checkNetwork'.tr;
+  static String get profile => 'profile'.tr;
+  static String get language => 'language'.tr;
+  static String get logout => 'logout'.tr;
+  static String get success => 'success'.tr;
+  static String get loginSuccessful => 'loginSuccessful'.tr;
+  static String get statusUpdated => 'statusUpdated'.tr;
+  static String get orderMarkedUndelivered => 'orderMarkedUndelivered'.tr;
+  static String get cashCollectedSuccess => 'cashCollectedSuccess'.tr;
+  static String get paymentCollectedSuccess => 'paymentCollectedSuccess'.tr;
+}
