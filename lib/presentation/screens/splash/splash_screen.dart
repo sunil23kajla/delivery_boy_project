@@ -19,10 +19,10 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.delivery_dining,
-              size: width * 0.25,
-              color: AppColors.primary,
+            Image.asset(
+              'assets/images/logo.png',
+              width: width * 0.5,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 20),
             Text(

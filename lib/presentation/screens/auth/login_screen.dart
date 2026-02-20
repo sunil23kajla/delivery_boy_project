@@ -36,7 +36,12 @@ class LoginScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   Icon(Icons.delivery_dining, size: width * 0.2, color: Colors.white),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    width: width * 0.4,
+                    color: Colors.white,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     AppStrings.appName,
@@ -87,9 +92,11 @@ class LoginScreen extends StatelessWidget {
                       controller: controller.emailPhoneController,
                       decoration: InputDecoration(
                         hintText: AppStrings.enterEmailOrPhone,
-                        prefixIcon: const Icon(Icons.person_outline, color: AppColors.primary),
+                        prefixIcon: const Icon(Icons.person_outline,
+                            color: AppColors.primary),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 15),
                       ),
                     ),
                   ),
