@@ -5,6 +5,7 @@ class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
   final bool isLoading;
+  final bool isEnabled;
   final Color? color;
   final double? width;
 
@@ -13,14 +14,18 @@ class CustomButton extends StatelessWidget {
     required this.text,
     required this.onPressed,
     this.isLoading = false,
+    this.isEnabled = true,
     this.color,
     this.width,
   });
 
   @override
   Widget build(BuildContext context) {
+    bool effectivelyEnabled = isEnabled && !isLoading;
+    Color baseColor = isEnabled ? (color ?? AppColors.primary) : Colors.grey;
+
     return InkWell(
-      onTap: isLoading ? null : onPressed,
+      onTap: effectivelyEnabled ? onPressed : null,
       borderRadius: BorderRadius.circular(15),
       child: Container(
         width: width ?? double.infinity,
@@ -28,20 +33,22 @@ class CustomButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              color ?? AppColors.primary,
-              (color ?? AppColors.primary).withOpacity(0.8),
+              baseColor,
+              baseColor.withOpacity(0.8),
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: (color ?? AppColors.primary).withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          boxShadow: effectivelyEnabled
+              ? [
+                  BoxShadow(
+                    color: baseColor.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : null,
         ),
         child: Center(
           child: isLoading

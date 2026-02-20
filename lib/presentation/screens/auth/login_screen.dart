@@ -97,6 +97,7 @@ class LoginScreen extends StatelessWidget {
                   Obx(() => CustomButton(
                         text: AppStrings.sendOtp,
                         isLoading: controller.isLoading,
+                        isEnabled: controller.isEmailPhoneValid.value,
                         onPressed: controller.sendOtp,
                       )),
                 ],

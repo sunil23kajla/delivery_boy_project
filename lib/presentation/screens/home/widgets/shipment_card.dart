@@ -45,7 +45,8 @@ class ShipmentCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -64,12 +65,14 @@ class ShipmentCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textSecondary),
+                const Icon(Icons.location_on_outlined,
+                    size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     shipment['address'] ?? '',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 14),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -85,14 +88,41 @@ class ShipmentCard extends StatelessWidget {
                   children: [
                     Text(
                       AppStrings.typePayment,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                    ),
-                    Text(
-                      shipment['type'] ?? '',
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+                          color: AppColors.textSecondary, fontSize: 12),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          shipment['type'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (shipment['type'] == 'COD' &&
+                            shipment['amount'] != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Text(
+                              '₹ ${shipment['amount']}',
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -101,7 +131,8 @@ class ShipmentCard extends StatelessWidget {
                     _ActionButton(
                       icon: Icons.phone,
                       color: Colors.green,
-                      onTap: () => ExternalActions.makeCall(shipment['phone'] ?? ''),
+                      onTap: () =>
+                          ExternalActions.makeCall(shipment['phone'] ?? ''),
                     ),
                     const SizedBox(width: 15),
                     _ActionButton(
@@ -128,7 +159,8 @@ class _ActionButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ActionButton({required this.icon, required this.color, required this.onTap});
+  const _ActionButton(
+      {required this.icon, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

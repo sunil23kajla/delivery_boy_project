@@ -100,6 +100,7 @@ class OtpScreen extends StatelessWidget {
             Obx(() => CustomButton(
                   text: AppStrings.verifyOtp,
                   isLoading: controller.isLoading,
+                  isEnabled: controller.isOtpValid.value,
                   onPressed: controller.verifyOtp,
                 )),
             const SizedBox(height: 20),

@@ -6,6 +6,8 @@ import '../../presentation/screens/splash/splash_screen.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/otp_screen.dart';
 import '../../presentation/screens/network/no_internet_screen.dart';
+import '../../presentation/screens/delivery_flow/delivery_flow_screen.dart';
+import '../../presentation/screens/undelivered/undelivered_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -15,6 +17,8 @@ class AppRoutes {
   static const String home = '/home';
   static const String orderDetails = '/order-details';
   static const String settings = '/settings';
+  static const String deliveryFlow = '/delivery-flow';
+  static const String undeliveredProcess = '/undelivered-process';
 
   static List<GetPage> routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -24,5 +28,7 @@ class AppRoutes {
     GetPage(name: home, page: () => const HomeScreen()),
     GetPage(name: orderDetails, page: () => const OrderDetailsScreen()),
     GetPage(name: settings, page: () => const SettingsScreen()),
+    GetPage(name: deliveryFlow, page: () => const DeliveryFlowScreen()),
+    GetPage(name: undeliveredProcess, page: () => const UndeliveredScreen()),
   ];
 }
