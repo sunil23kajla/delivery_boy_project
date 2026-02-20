@@ -73,7 +73,7 @@ class SummaryView extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: Colors.grey.shade100),
             ),
-            child: Column(
+            child: const Column(
               children: [
                 const _CollectionItem(label: "TOTAL COD.", value: "₹ 9,168.00"),
                 const Divider(height: 30),
