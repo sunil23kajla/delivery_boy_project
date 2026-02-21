@@ -75,11 +75,11 @@ class SummaryView extends StatelessWidget {
             ),
             child: const Column(
               children: [
-                const _CollectionItem(label: "TOTAL COD.", value: "₹ 9,168.00"),
+                _CollectionItem(label: "TOTAL COD.", value: "₹ 9,168.00"),
                 const Divider(height: 30),
-                const _CollectionItem(label: "CASH", value: "₹ 5,074.00"),
+                _CollectionItem(label: "CASH", value: "₹ 5,074.00"),
                 const Divider(height: 30),
-                const _CollectionItem(label: "ONLINE", value: "₹ 4,094.00"),
+                _CollectionItem(label: "ONLINE", value: "₹ 4,094.00"),
               ],
             ),
           ),

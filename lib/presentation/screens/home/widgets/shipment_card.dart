@@ -15,7 +15,22 @@ class ShipmentCard extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
 
     return InkWell(
-      onTap: () => Get.toNamed(AppRoutes.orderDetails, arguments: shipment),
+      onTap: () {
+        if (shipment['status'] == 'FWD') {
+          Get.toNamed(AppRoutes.orderDetails, arguments: shipment);
+        } else {
+          Get.snackbar(
+            "Coming Soon",
+            "The flow for ${shipment['status']} category is currently under development.",
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.primary.withOpacity(0.9),
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(15),
+            borderRadius: 10,
+            duration: const Duration(seconds: 2),
+          );
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(15),

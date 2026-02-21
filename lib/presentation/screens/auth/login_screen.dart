@@ -39,7 +39,6 @@ class LoginScreen extends StatelessWidget {
                   Image.asset(
                     'assets/images/logo.png',
                     width: width * 0.4,
-                    color: Colors.white,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 10),

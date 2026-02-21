@@ -116,7 +116,6 @@ class HomeScreen extends StatelessWidget {
                               child: Image.asset(
                                 'assets/images/logo.png',
                                 width: 30,
-                                color: Colors.white,
                                 fit: BoxFit.contain,
                               ),
                             ),
