@@ -69,8 +69,7 @@ class DeliveryPaymentView extends GetView<DeliveryFlowController> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => controller.currentStep.value =
-                      DeliveryStep.recipientDetails,
+                  onPressed: controller.previousStep,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     side: const BorderSide(color: AppColors.primary),

@@ -15,7 +15,7 @@ class SummaryView extends StatelessWidget {
         children: [
           // ── Summary Table ───────────────────────────────────────────
           const Text(
-            "SUMMARY PAGE",
+            "SUMMARY",
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

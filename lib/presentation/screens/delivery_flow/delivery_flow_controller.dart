@@ -88,13 +88,18 @@ class DeliveryFlowController extends GetxController {
   // Image Step
   var images = <File>[].obs;
   final ImagePicker _picker = ImagePicker();
+  bool get isCod => shipment['status'] == 'FWD' && shipment['type'] == 'COD';
   bool get isImageStepValid =>
       images.length >= 2; // front + back required, customer optional
 
   void nextStep() {
     if (currentStep.value == DeliveryStep.scan) {
       if (isScanDone.value) {
-        currentStep.value = DeliveryStep.otp;
+        if (scannedBarcode.value == "SKIPPED") {
+          currentStep.value = DeliveryStep.options;
+        } else {
+          currentStep.value = DeliveryStep.otp;
+        }
       }
     } else if (currentStep.value == DeliveryStep.otp) {
       if (isOtpStepValid) {
@@ -117,7 +122,11 @@ class DeliveryFlowController extends GetxController {
       }
     } else if (currentStep.value == DeliveryStep.recipientDetails) {
       if (isRecipientDetailsStepValid) {
-        currentStep.value = DeliveryStep.payment;
+        if (isCod) {
+          currentStep.value = DeliveryStep.payment;
+        } else {
+          currentStep.value = DeliveryStep.images;
+        }
       }
     } else if (currentStep.value == DeliveryStep.payment) {
       if (isPaymentStepValid) {
@@ -129,6 +138,32 @@ class DeliveryFlowController extends GetxController {
       } else if (selectedPaymentMethod.value == 'upi' &&
           isPaymentVerified.value) {
         currentStep.value = DeliveryStep.images;
+      }
+    }
+  }
+
+  void previousStep() {
+    if (currentStep.value == DeliveryStep.scan) {
+      Get.back();
+    } else if (currentStep.value == DeliveryStep.otp) {
+      currentStep.value = DeliveryStep.scan;
+    } else if (currentStep.value == DeliveryStep.options) {
+      if (scannedBarcode.value == "SKIPPED") {
+        currentStep.value = DeliveryStep.scan;
+      } else {
+        currentStep.value = DeliveryStep.otp;
+      }
+    } else if (currentStep.value == DeliveryStep.recipientDetails) {
+      currentStep.value = DeliveryStep.options;
+    } else if (currentStep.value == DeliveryStep.payment) {
+      currentStep.value = DeliveryStep.recipientDetails;
+    } else if (currentStep.value == DeliveryStep.paymentDetails) {
+      currentStep.value = DeliveryStep.payment;
+    } else if (currentStep.value == DeliveryStep.images) {
+      if (isCod) {
+        currentStep.value = DeliveryStep.paymentDetails;
+      } else {
+        currentStep.value = DeliveryStep.recipientDetails;
       }
     }
   }

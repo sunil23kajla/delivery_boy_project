@@ -24,7 +24,7 @@ class DeliveryFlowScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
-          onPressed: () => Get.back(),
+          onPressed: controller.previousStep,
         ),
         title: Obx(() {
           String title = "";

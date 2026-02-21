@@ -18,12 +18,18 @@ class ShipmentCard extends StatelessWidget {
       onTap: () {
         if (shipment['status'] == 'FWD') {
           Get.toNamed(AppRoutes.orderDetails, arguments: shipment);
+        } else if (shipment['status'] == 'RVP') {
+          Get.toNamed(AppRoutes.rvpFlow, arguments: shipment);
+        } else if (shipment['status'] == 'RT') {
+          Get.toNamed(AppRoutes.rtFlow, arguments: shipment);
+        } else if (shipment['status'] == 'FM') {
+          Get.toNamed(AppRoutes.fmFlow, arguments: shipment);
         } else {
           Get.snackbar(
             "Coming Soon",
-            "The flow for ${shipment['status']} category is currently under development.",
+            "Flow for this category is under development.",
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.primary.withOpacity(0.9),
+            backgroundColor: Colors.orange.withOpacity(0.9),
             colorText: Colors.white,
             margin: const EdgeInsets.all(15),
             borderRadius: 10,
@@ -116,7 +122,8 @@ class ShipmentCard extends StatelessWidget {
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        if (shipment['type'] == 'COD' &&
+                        if (shipment['status'] == 'FWD' &&
+                            shipment['type'] == 'COD' &&
                             shipment['amount'] != null) ...[
                           const SizedBox(width: 8),
                           Container(
@@ -131,6 +138,25 @@ class ShipmentCard extends StatelessWidget {
                               '₹ ${shipment['amount']}',
                               style: TextStyle(
                                 color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: const Text(
+                              'PAID',
+                              style: TextStyle(
+                                color: Colors.blue,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
