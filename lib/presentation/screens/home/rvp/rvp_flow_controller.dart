@@ -4,6 +4,9 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/data/repository/shipment_repository.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
+import 'package:delivery_boy/core/services/session_service.dart';
 
 enum RvpStep {
   details, // Details + App/Customer Images
@@ -25,7 +28,10 @@ enum RvpCancelReason {
   misroute
 }
 
-class RvpFlowController extends GetxController {
+class RvpFlowController extends BaseController {
+  final ShipmentRepository _shipmentRepository = Get.find<ShipmentRepository>();
+  final SessionService _sessionService = Get.find<SessionService>();
+
   late Map<String, dynamic> shipment;
   var currentStep = RvpStep.details.obs;
   var isCancelFlow = false.obs;
@@ -124,12 +130,71 @@ class RvpFlowController extends GetxController {
         }
         break;
       case RvpStep.scan:
-        // Logic handled in scanner callback or complete button
+        if (scannedBarcode.value.isNotEmpty) {
+          _completePickup();
+        } else {
+          Get.snackbar("Error", "Please scan polythene QR to complete");
+        }
         break;
       case RvpStep.complete:
         Get.offAllNamed(AppRoutes.home);
         break;
     }
+  }
+
+  Future<void> _completePickup() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "placeholder_token";
+      await _shipmentRepository.updateOrderStatus(
+        orderId: shipment['orderId'].toString(),
+        status: "PICKED_UP",
+        token: token,
+      );
+      hideLoading();
+      _showSuccessDialog();
+    } catch (e) {
+      handleError(e);
+    }
+  }
+
+  void _showSuccessDialog() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 80),
+              const SizedBox(height: 20),
+              const Text("SUCCESS",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              const Text("Pickup Completed Successfully",
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Get.offAllNamed(AppRoutes.home),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("OK",
+                      style: TextStyle(color: Colors.white, fontSize: 18)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 
   void previousStep() {
@@ -171,13 +236,13 @@ class RvpFlowController extends GetxController {
       // Logic for cancellation completion
       if (selectedCancelReason.value == RvpCancelReason.cancelledByCustomer) {
         if (isCancelOtpVerified.value) {
-          _showCancelSuccess();
+          _markPending();
         } else {
           Get.snackbar("Error", "Please verify OTP first");
         }
       } else {
         if (cancelReasonDetailController.text.trim().isNotEmpty) {
-          _showCancelSuccess();
+          _markPending();
         } else {
           Get.snackbar("Error", "Please enter reason details");
         }
@@ -185,8 +250,20 @@ class RvpFlowController extends GetxController {
     }
   }
 
-  void _showCancelSuccess() {
-    Get.offAllNamed(AppRoutes.home);
+  Future<void> _markPending() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "placeholder_token";
+      await _shipmentRepository.updateOrderStatus(
+        orderId: shipment['orderId'].toString(),
+        status: "PENDING",
+        token: token,
+      );
+      hideLoading();
+      Get.offAllNamed(AppRoutes.home);
+    } catch (e) {
+      handleError(e);
+    }
   }
 
   void verifyCancelOtp() {

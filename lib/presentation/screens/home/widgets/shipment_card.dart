@@ -7,36 +7,40 @@ import '../../../../core/utils/external_actions.dart';
 
 class ShipmentCard extends StatelessWidget {
   final Map<String, dynamic> shipment;
+  final bool navigateOnTap;
 
-  const ShipmentCard({super.key, required this.shipment});
+  const ShipmentCard(
+      {super.key, required this.shipment, this.navigateOnTap = true});
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
 
     return InkWell(
-      onTap: () {
-        if (shipment['status'] == 'FWD') {
-          Get.toNamed(AppRoutes.orderDetails, arguments: shipment);
-        } else if (shipment['status'] == 'RVP') {
-          Get.toNamed(AppRoutes.rvpFlow, arguments: shipment);
-        } else if (shipment['status'] == 'RT') {
-          Get.toNamed(AppRoutes.rtFlow, arguments: shipment);
-        } else if (shipment['status'] == 'FM') {
-          Get.toNamed(AppRoutes.fmFlow, arguments: shipment);
-        } else {
-          Get.snackbar(
-            "Coming Soon",
-            "Flow for this category is under development.",
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange.withOpacity(0.9),
-            colorText: Colors.white,
-            margin: const EdgeInsets.all(15),
-            borderRadius: 10,
-            duration: const Duration(seconds: 2),
-          );
-        }
-      },
+      onTap: navigateOnTap
+          ? () {
+              if (shipment['status'] == 'FWD') {
+                Get.toNamed(AppRoutes.orderDetails, arguments: shipment);
+              } else if (shipment['status'] == 'RVP') {
+                Get.toNamed(AppRoutes.rvpFlow, arguments: shipment);
+              } else if (shipment['status'] == 'RT') {
+                Get.toNamed(AppRoutes.rtFlow, arguments: shipment);
+              } else if (shipment['status'] == 'FM') {
+                Get.toNamed(AppRoutes.fmFlow, arguments: shipment);
+              } else {
+                Get.snackbar(
+                  "Coming Soon",
+                  "Flow for this category is under development.",
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.orange.withOpacity(0.9),
+                  colorText: Colors.white,
+                  margin: const EdgeInsets.all(15),
+                  borderRadius: 10,
+                  duration: const Duration(seconds: 2),
+                );
+              }
+            }
+          : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(15),

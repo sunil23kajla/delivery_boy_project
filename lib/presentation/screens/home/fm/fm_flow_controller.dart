@@ -4,6 +4,9 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/data/repository/shipment_repository.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
+import 'package:delivery_boy/core/services/session_service.dart';
 
 enum FmStep {
   details, // Step 1: Info + Checklist (Product/Weight)
@@ -22,7 +25,10 @@ enum FmCancelReason {
   misroute // -> Reason
 }
 
-class FmFlowController extends GetxController {
+class FmFlowController extends BaseController {
+  final ShipmentRepository _shipmentRepository = Get.find<ShipmentRepository>();
+  final SessionService _sessionService = Get.find<SessionService>();
+
   late Map<String, dynamic> shipment;
   var currentStep = FmStep.details.obs;
   var isCancelFlow = false.obs;
@@ -91,7 +97,7 @@ class FmFlowController extends GetxController {
         break;
       case FmStep.scan:
         if (scannedBarcode.value.isNotEmpty) {
-          _showSuccessDialog();
+          _completePickup();
         } else {
           Get.snackbar("Error", "Please scan to complete");
         }
@@ -99,6 +105,22 @@ class FmFlowController extends GetxController {
       case FmStep.complete:
         Get.offAllNamed(AppRoutes.home);
         break;
+    }
+  }
+
+  Future<void> _completePickup() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "placeholder_token";
+      await _shipmentRepository.updateOrderStatus(
+        orderId: shipment['orderId'].toString(),
+        status: "PICKED_UP",
+        token: token,
+      );
+      hideLoading();
+      _showSuccessDialog();
+    } catch (e) {
+      handleError(e);
     }
   }
 
@@ -163,17 +185,33 @@ class FmFlowController extends GetxController {
       if (selectedCancelReason.value ==
           FmCancelReason.pickupCancelledBySeller) {
         if (isCancelOtpVerified.value) {
-          _showCancelSuccess();
+          _markPending();
         } else {
           Get.snackbar("Error", "Please verify OTP first");
         }
       } else {
         if (cancelReasonDetailController.text.trim().isNotEmpty) {
-          _showCancelSuccess();
+          _markPending();
         } else {
           Get.snackbar("Error", "Please enter reason details");
         }
       }
+    }
+  }
+
+  Future<void> _markPending() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "placeholder_token";
+      await _shipmentRepository.updateOrderStatus(
+        orderId: shipment['orderId'].toString(),
+        status: "PENDING",
+        token: token,
+      );
+      hideLoading();
+      _showCancelSuccess();
+    } catch (e) {
+      handleError(e);
     }
   }
 

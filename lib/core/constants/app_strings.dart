@@ -70,4 +70,12 @@ class AppStrings {
   static String get bloodGroup => 'bloodGroup'.tr;
   static String get theme => 'theme'.tr;
   static String get name => 'name'.tr;
+  static String get email => 'email'.tr;
+  static String get address => 'address'.tr;
+  static String get logoutConfirm => 'logoutConfirm'.tr;
+  static String get logoutMessage => 'logoutMessage'.tr;
+  static String get exitApp => 'exitApp'.tr;
+  static String get exitMessage => 'exitMessage'.tr;
+  static String get yes => 'yes'.tr;
+  static String get no => 'no'.tr;
 }

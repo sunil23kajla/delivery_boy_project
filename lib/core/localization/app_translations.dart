@@ -72,6 +72,13 @@ class AppTranslations extends Translations {
           'bloodGroup': 'B GROP.',
           'theme': 'THIM',
           'name': 'NAME',
+          'address': 'ADDRESS',
+          'logoutConfirm': 'Logout Confirmation',
+          'logoutMessage': 'Are you sure you want to logout?',
+          'exitApp': 'Exit App',
+          'exitMessage': 'Do you want to exit the app?',
+          'yes': 'Yes',
+          'no': 'No',
         },
         'hi_IN': {
           'appName': 'डेलीवरी बॉय',
@@ -144,6 +151,13 @@ class AppTranslations extends Translations {
           'bloodGroup': 'ब्लड ग्रुप.',
           'theme': 'थीम',
           'name': 'नाम',
+          'address': 'पता',
+          'logoutConfirm': 'लॉगआउट पुष्टिकरण',
+          'logoutMessage': 'क्या आप वाकई लॉगआउट करना चाहते हैं?',
+          'exitApp': 'ऐप बंद करें',
+          'exitMessage': 'क्या आप ऐप से बाहर निकलना चाहते हैं?',
+          'yes': 'हाँ',
+          'no': 'नहीं',
         },
       };
 }

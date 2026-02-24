@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'home_controller.dart';
 import 'widgets/shipment_card.dart';
@@ -15,202 +16,223 @@ class HomeScreen extends StatelessWidget {
     final controller = Get.put(HomeController());
     final width = MediaQuery.of(context).size.width;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          AppStrings.homePage,
-          style: const TextStyle(
-              color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: CircleAvatar(
-              radius: 12,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child:
-                  const Icon(Icons.person, color: AppColors.primary, size: 18),
-            ),
-            onPressed: () => Get.toNamed(AppRoutes.settings),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        _showExitDialog(context);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: Text(
+            AppStrings.homePage,
+            style: const TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(width: 10),
-        ],
-      ),
-      body: Obx(() => controller.rxIndex.value == 0
-          ? Column(
-              children: [
-                // Greeting Banner
-                Obx(() {
-                  final total = controller.shipments.length;
-                  final pending = total;
-                  final now = DateTime.now();
-                  final hour = now.hour;
-                  final greeting = hour < 12
-                      ? 'Good Morning'
-                      : hour < 17
-                          ? 'Good Afternoon'
-                          : 'Good Evening';
-                  final months = [
-                    'Jan',
-                    'Feb',
-                    'Mar',
-                    'Apr',
-                    'May',
-                    'Jun',
-                    'Jul',
-                    'Aug',
-                    'Sep',
-                    'Oct',
-                    'Nov',
-                    'Dec'
-                  ];
-                  final dateStr =
-                      '${now.day} ${months[now.month - 1]} ${now.year}';
-                  return Container(
-                    margin:
-                        EdgeInsets.fromLTRB(width * 0.04, 10, width * 0.04, 0),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, Color(0xFF1976D2)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$greeting, Sunil 👋',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  dateStr,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Image.asset(
-                                'assets/images/logo.png',
-                                width: 30,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ],
+          backgroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: CircleAvatar(
+                radius: 12,
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                child: const Icon(Icons.person,
+                    color: AppColors.primary, size: 18),
+              ),
+              onPressed: () => Get.toNamed(AppRoutes.settings),
+            ),
+            const SizedBox(width: 10),
+          ],
+        ),
+        body: Obx(() => controller.rxIndex.value == 0
+            ? Column(
+                children: [
+                  // Greeting Banner
+                  Obx(() {
+                    final total = controller.shipments.length;
+                    final pending = total;
+                    final now = DateTime.now();
+                    final hour = now.hour;
+                    final greeting = hour < 12
+                        ? 'Good Morning'
+                        : hour < 17
+                            ? 'Good Afternoon'
+                            : 'Good Evening';
+                    final months = [
+                      'Jan',
+                      'Feb',
+                      'Mar',
+                      'Apr',
+                      'May',
+                      'Jun',
+                      'Jul',
+                      'Aug',
+                      'Sep',
+                      'Oct',
+                      'Nov',
+                      'Dec'
+                    ];
+                    final dateStr =
+                        '${now.day} ${months[now.month - 1]} ${now.year}';
+                    return Container(
+                      margin: EdgeInsets.fromLTRB(
+                          width * 0.04, 10, width * 0.04, 0),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, Color(0xFF1976D2)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            _QuickStat(
-                                label: 'Total',
-                                value: '$total',
-                                color: Colors.white),
-                            const SizedBox(width: 12),
-                            const _QuickStat(
-                                label: 'Delivered',
-                                value: '0',
-                                color: Colors.greenAccent),
-                            const SizedBox(width: 12),
-                            _QuickStat(
-                                label: 'Pending',
-                                value: '$pending',
-                                color: Colors.orangeAccent),
-                          ],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$greeting, Sunil 👋',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    dateStr,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  width: 30,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              _QuickStat(
+                                  label: 'Total',
+                                  value: '$total',
+                                  color: Colors.white),
+                              const SizedBox(width: 12),
+                              const _QuickStat(
+                                  label: 'Delivered',
+                                  value: '0',
+                                  color: Colors.greenAccent),
+                              const SizedBox(width: 12),
+                              _QuickStat(
+                                  label: 'Pending',
+                                  value: '$pending',
+                                  color: Colors.orangeAccent),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+
+                  // Filter Tabs
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: width * 0.04, vertical: 10),
+                    child: Row(
+                      children: [
+                        _FilterChip(
+                          label: "All(${controller.getCount("All")})",
+                          isSelected:
+                              controller.rxSelectedFilter.value == "All",
+                          onTap: () => controller.selectFilter("All"),
+                        ),
+                        _FilterChip(
+                          label: "FWD(${controller.getCount("FWD")})",
+                          isSelected:
+                              controller.rxSelectedFilter.value == "FWD",
+                          onTap: () => controller.selectFilter("FWD"),
+                        ),
+                        _FilterChip(
+                          label: "RVP(${controller.getCount("RVP")})",
+                          isSelected:
+                              controller.rxSelectedFilter.value == "RVP",
+                          onTap: () => controller.selectFilter("RVP"),
+                        ),
+                        _FilterChip(
+                          label: "RT(${controller.getCount("RT")})",
+                          isSelected: controller.rxSelectedFilter.value == "RT",
+                          onTap: () => controller.selectFilter("RT"),
+                        ),
+                        _FilterChip(
+                          label: "FM(${controller.getCount("FM")})",
+                          isSelected: controller.rxSelectedFilter.value == "FM",
+                          onTap: () => controller.selectFilter("FM"),
                         ),
                       ],
                     ),
-                  );
-                }),
-
-                // Filter Tabs
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: width * 0.04, vertical: 10),
-                  child: Row(
-                    children: [
-                      _FilterChip(
-                        label: "All(${controller.getCount("All")})",
-                        isSelected: controller.rxSelectedFilter.value == "All",
-                        onTap: () => controller.selectFilter("All"),
-                      ),
-                      _FilterChip(
-                        label: "FWD(${controller.getCount("FWD")})",
-                        isSelected: controller.rxSelectedFilter.value == "FWD",
-                        onTap: () => controller.selectFilter("FWD"),
-                      ),
-                      _FilterChip(
-                        label: "RVP(${controller.getCount("RVP")})",
-                        isSelected: controller.rxSelectedFilter.value == "RVP",
-                        onTap: () => controller.selectFilter("RVP"),
-                      ),
-                      _FilterChip(
-                        label: "RT(${controller.getCount("RT")})",
-                        isSelected: controller.rxSelectedFilter.value == "RT",
-                        onTap: () => controller.selectFilter("RT"),
-                      ),
-                      _FilterChip(
-                        label: "FM(${controller.getCount("FM")})",
-                        isSelected: controller.rxSelectedFilter.value == "FM",
-                        onTap: () => controller.selectFilter("FM"),
-                      ),
-                    ],
                   ),
+
+                  // Shipment List
+                  Expanded(
+                    child: ListView.builder(
+                      padding: EdgeInsets.all(width * 0.04),
+                      itemCount: controller.filteredShipments.length,
+                      itemBuilder: (context, index) {
+                        return ShipmentCard(
+                            shipment: controller.filteredShipments[index]);
+                      },
+                    ),
+                  ),
+                ],
+              )
+            : const SummaryView()),
+        bottomNavigationBar: Obx(() => BottomNavigationBar(
+              currentIndex: controller.rxIndex.value,
+              onTap: controller.changeTabIndex,
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: AppColors.textSecondary,
+              items: [
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.grid_view_rounded),
+                  label: AppStrings.shipments,
                 ),
-
-                // Shipment List
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(width * 0.04),
-                    itemCount: controller.filteredShipments.length,
-                    itemBuilder: (context, index) {
-                      return ShipmentCard(
-                          shipment: controller.filteredShipments[index]);
-                    },
-                  ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.assignment_outlined),
+                  label: AppStrings.summary,
                 ),
               ],
-            )
-          : const SummaryView()),
-      bottomNavigationBar: Obx(() => BottomNavigationBar(
-            currentIndex: controller.rxIndex.value,
-            onTap: controller.changeTabIndex,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.textSecondary,
-            items: [
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.grid_view_rounded),
-                label: AppStrings.shipments,
-              ),
-              BottomNavigationBarItem(
-                icon: const Icon(Icons.assignment_outlined),
-                label: AppStrings.summary,
-              ),
-            ],
-          )),
+            )),
+      ),
+    );
+  }
+
+  void _showExitDialog(BuildContext context) {
+    Get.defaultDialog(
+      title: AppStrings.exitApp,
+      middleText: AppStrings.exitMessage,
+      textConfirm: AppStrings.yes,
+      textCancel: AppStrings.no,
+      confirmTextColor: Colors.white,
+      onConfirm: () => SystemNavigator.pop(),
     );
   }
 }

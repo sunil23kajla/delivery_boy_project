@@ -44,6 +44,7 @@ dependencies:
   url_launcher: ^6.3.0
   image_picker: ^1.1.2
   mobile_scanner: ^5.2.3
+  get_storage: ^2.1.1
 
 dev_dependencies:
   flutter_test:

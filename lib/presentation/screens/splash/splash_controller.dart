@@ -1,15 +1,22 @@
 import 'package:get/get.dart';
 import '../../../core/constants/app_routes.dart';
+import '../../../core/services/session_service.dart';
 
 class SplashController extends GetxController {
+  final SessionService _sessionService = Get.find<SessionService>();
+
   @override
   void onInit() {
     super.onInit();
-    _navigateToLogin();
+    _handleNavigation();
   }
 
-  void _navigateToLogin() async {
+  void _handleNavigation() async {
     await Future.delayed(const Duration(seconds: 3));
-    Get.offAllNamed(AppRoutes.login);
+    if (_sessionService.isLoggedIn) {
+      Get.offAllNamed(AppRoutes.home);
+    } else {
+      Get.offAllNamed(AppRoutes.login);
+    }
   }
 }

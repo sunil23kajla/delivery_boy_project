@@ -232,54 +232,59 @@ class OrderDetailsScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.fromLTRB(width * 0.05, 10, width * 0.05, 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5))
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  side: const BorderSide(color: AppColors.error),
-                ),
-                onPressed: () => Get.toNamed(AppRoutes.undeliveredProcess,
-                    arguments: controller.shipment),
-                child: const Text("MARK UNDELIVERED",
-                    style: TextStyle(
-                        color: AppColors.error, fontWeight: FontWeight.bold)),
+      bottomNavigationBar: (Get.arguments is Map &&
+              Get.arguments['readOnly'] == true)
+          ? null
+          : Container(
+              padding: EdgeInsets.fromLTRB(width * 0.05, 10, width * 0.05, 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5))
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: AppColors.error),
+                      ),
+                      onPressed: () => Get.toNamed(AppRoutes.undeliveredProcess,
+                          arguments: controller.shipment),
+                      child: const Text("MARK UNDELIVERED",
+                          style: TextStyle(
+                              color: AppColors.error,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Get.toNamed(AppRoutes.deliveryFlow,
+                          arguments: controller.shipment),
+                      child: const Text("MARK DELIVERED",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                onPressed: () => Get.toNamed(AppRoutes.deliveryFlow,
-                    arguments: controller.shipment),
-                child: const Text("MARK DELIVERED",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

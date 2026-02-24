@@ -10,7 +10,7 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(AuthController());
+    final controller = Get.find<AuthController>();
     final size = MediaQuery.of(context).size;
     final width = size.width;
     final height = size.height;
@@ -88,10 +88,13 @@ class LoginScreen extends StatelessWidget {
                       ],
                     ),
                     child: TextField(
-                      controller: controller.emailPhoneController,
+                      controller: controller.mobileController,
+                      keyboardType: TextInputType.phone,
+                      maxLength: 10,
                       decoration: InputDecoration(
-                        hintText: AppStrings.enterEmailOrPhone,
-                        prefixIcon: const Icon(Icons.person_outline,
+                        counterText: "",
+                        hintText: "Enter Mobile Number",
+                        prefixIcon: const Icon(Icons.phone_android_outlined,
                             color: AppColors.primary),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
@@ -103,7 +106,7 @@ class LoginScreen extends StatelessWidget {
                   Obx(() => CustomButton(
                         text: AppStrings.sendOtp,
                         isLoading: controller.isLoading,
-                        isEnabled: controller.isEmailPhoneValid.value,
+                        isEnabled: controller.isMobileValid.value,
                         onPressed: controller.sendOtp,
                       )),
                 ],

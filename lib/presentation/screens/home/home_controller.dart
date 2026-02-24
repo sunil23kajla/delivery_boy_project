@@ -12,7 +12,7 @@ class HomeController extends GetxController {
     rxSelectedFilter.value = filter;
   }
 
-  // Mock shipment data
+  // Mock shipment data with delivery_status (SUCCESS, FAILED, DISPATCH)
   final shipments = <Map<String, dynamic>>[
     {
       'tracking_id': 'SK45621',
@@ -25,6 +25,7 @@ class HomeController extends GetxController {
       'type': 'COD',
       'amount': '500.00',
       'status': 'FWD',
+      'delivery_status': 'SUCCESS',
       'items': [
         {'name': 'Sneakers (Size 9)', 'qty': '1'},
         {'name': 'Sports Socks', 'qty': '3'},
@@ -41,6 +42,7 @@ class HomeController extends GetxController {
       'type': 'Prepaid',
       'amount': '450.00',
       'status': 'FWD',
+      'delivery_status': 'SUCCESS',
       'items': [
         {'name': 'Formal Shirt (L)', 'qty': '2'},
       ],
@@ -56,6 +58,7 @@ class HomeController extends GetxController {
       'type': 'COD',
       'amount': '300.00',
       'status': 'FWD',
+      'delivery_status': 'FAILED',
       'items': [
         {'name': 'Bluetooth Earphones', 'qty': '1'},
       ],
@@ -71,6 +74,7 @@ class HomeController extends GetxController {
       'type': 'Prepaid',
       'amount': '800.00',
       'status': 'RVP',
+      'delivery_status': 'SUCCESS',
       'items': [
         {'name': 'Kurta Set', 'qty': '1'},
         {'name': 'Dupatta', 'qty': '2'},
@@ -87,6 +91,7 @@ class HomeController extends GetxController {
       'type': 'COD',
       'amount': '1200.00',
       'status': 'RVP',
+      'delivery_status': 'DISPATCH',
       'items': [
         {'name': 'Mobile Phone', 'qty': '1'},
         {'name': 'Phone Cover', 'qty': '1'},
@@ -103,6 +108,7 @@ class HomeController extends GetxController {
       'type': 'Prepaid',
       'amount': '950.00',
       'status': 'RVP',
+      'delivery_status': 'SUCCESS',
       'items': [
         {'name': 'Running Shoes', 'qty': '1'},
       ],
@@ -118,6 +124,7 @@ class HomeController extends GetxController {
       'type': 'COD',
       'amount': '1200.00',
       'status': 'RT',
+      'delivery_status': 'FAILED',
       'items': [
         {'name': 'Laptop Bag', 'qty': '1'},
       ],
@@ -133,24 +140,10 @@ class HomeController extends GetxController {
       'type': 'Prepaid',
       'amount': '700.00',
       'status': 'RT',
+      'delivery_status': 'DISPATCH',
       'items': [
         {'name': 'Jeans (32)', 'qty': '1'},
         {'name': 'T-Shirt (M)', 'qty': '2'},
-      ],
-    },
-    {
-      'tracking_id': 'SK65414',
-      'order_id': 'ORD-3003',
-      'name': 'Anil Dhiman',
-      'phone': '8877665546',
-      'lat': 12.9718,
-      'lng': 77.5948,
-      'address': 'Indiranagar, Bangalore',
-      'type': 'COD',
-      'amount': '1500.00',
-      'status': 'RT',
-      'items': [
-        {'name': 'Smart Watch', 'qty': '1'},
       ],
     },
     {
@@ -159,24 +152,12 @@ class HomeController extends GetxController {
       'name': 'Mohit Verma',
       'phone': '7011223344',
       'status': 'FM',
+      'delivery_status': 'SUCCESS',
       'address': 'Jaipur, Rajasthan',
       'type': 'COD',
       'amount': '400.00',
       'items': [
         {'name': 'Perfume Bottle', 'qty': '1'},
-      ],
-    },
-    {
-      'tracking_id': 'SK32146',
-      'order_id': 'ORD-4002',
-      'name': 'Rakesh Jain',
-      'phone': '7011223345',
-      'status': 'FM',
-      'address': 'Ajmer Rd, Jaipur',
-      'type': 'Prepaid',
-      'amount': '650.00',
-      'items': [
-        {'name': 'Book Set (5 pcs)', 'qty': '1'},
       ],
     },
   ].obs;
@@ -193,5 +174,26 @@ class HomeController extends GetxController {
   int getCount(String status) {
     if (status == 'All') return shipments.length;
     return shipments.where((s) => s['status'] == status).length;
+  }
+
+  // --- Summary Flow Methods ---
+
+  int getSummaryCount(String category, String deliveryStatus) {
+    return shipments.where((s) {
+      final matchesCategory = (category == "ALL") || (s['status'] == category);
+      final matchesStatus = (deliveryStatus == "DISPATCH") ||
+          (s['delivery_status'] == deliveryStatus);
+      return matchesCategory && matchesStatus;
+    }).length;
+  }
+
+  List<Map<String, dynamic>> getSummaryList(
+      String category, String deliveryStatus) {
+    return shipments.where((s) {
+      final matchesCategory = (category == "ALL") || (s['status'] == category);
+      final matchesStatus = (deliveryStatus == "DISPATCH") ||
+          (s['delivery_status'] == deliveryStatus);
+      return matchesCategory && matchesStatus;
+    }).toList();
   }
 }

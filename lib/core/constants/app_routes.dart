@@ -11,6 +11,8 @@ import '../../presentation/screens/undelivered/undelivered_screen.dart';
 import '../../presentation/screens/home/rvp/rvp_flow_screen.dart';
 import '../../presentation/screens/home/rt/rt_flow_screen.dart';
 import '../../presentation/screens/home/fm/fm_flow_screen.dart';
+import '../../presentation/screens/home/summary/summary_list_screen.dart';
+import '../../presentation/screens/home/summary/summary_detail_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -25,6 +27,8 @@ class AppRoutes {
   static const String rvpFlow = '/rvp-flow';
   static const String rtFlow = '/rt-flow';
   static const String fmFlow = '/fm-flow';
+  static const String summaryList = '/summary-list';
+  static const String summaryDetail = '/summary-detail';
 
   static List<GetPage> routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -39,5 +43,7 @@ class AppRoutes {
     GetPage(name: rvpFlow, page: () => const RvpFlowScreen()),
     GetPage(name: rtFlow, page: () => const RtFlowScreen()),
     GetPage(name: fmFlow, page: () => const FmFlowScreen()),
+    GetPage(name: summaryList, page: () => const SummaryListScreen()),
+    GetPage(name: summaryDetail, page: () => const SummaryDetailScreen()),
   ];
 }

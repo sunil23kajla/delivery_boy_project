@@ -1,3 +1,6 @@
+import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/presentation/screens/home/home_controller.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 
@@ -6,6 +9,7 @@ class SummaryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<HomeController>();
     final width = MediaQuery.of(context).size.width;
 
     return SingleChildScrollView(
@@ -53,11 +57,11 @@ class SummaryView extends StatelessWidget {
                   DataColumn(label: Text('%')),
                 ],
                 rows: [
-                  _buildSummaryRow("ALL", 28, 19, 9),
-                  _buildSummaryRow("FWD", 15, 12, 3),
-                  _buildSummaryRow("RVP", 8, 5, 3),
-                  _buildSummaryRow("FM", 3, 1, 2),
-                  _buildSummaryRow("RT", 2, 1, 1),
+                  _buildSummaryRow(controller, "ALL"),
+                  _buildSummaryRow(controller, "FWD"),
+                  _buildSummaryRow(controller, "RVP"),
+                  _buildSummaryRow(controller, "FM"),
+                  _buildSummaryRow(controller, "RT"),
                 ],
               ),
             ),
@@ -73,13 +77,13 @@ class SummaryView extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               border: Border.all(color: Colors.grey.shade100),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                _CollectionItem(label: "TOTAL COD.", value: "₹ 9,168.00"),
+                const _CollectionItem(label: "TOTAL COD.", value: "₹ 9,168.00"),
                 const Divider(height: 30),
-                _CollectionItem(label: "CASH", value: "₹ 5,074.00"),
+                const _CollectionItem(label: "CASH", value: "₹ 5,074.00"),
                 const Divider(height: 30),
-                _CollectionItem(label: "ONLINE", value: "₹ 4,094.00"),
+                const _CollectionItem(label: "ONLINE", value: "₹ 4,094.00"),
               ],
             ),
           ),
@@ -89,15 +93,38 @@ class SummaryView extends StatelessWidget {
     );
   }
 
-  DataRow _buildSummaryRow(String type, int dispatch, int success, int failed) {
+  DataRow _buildSummaryRow(HomeController controller, String type) {
+    int dispatch = controller.getSummaryCount(type, "DISPATCH");
+    int success = controller.getSummaryCount(type, "SUCCESS");
+    int failed = controller.getSummaryCount(type, "FAILED");
+
     double percent = dispatch > 0 ? (success / dispatch) * 100 : 0;
+
     return DataRow(cells: [
       DataCell(Text(type,
           style: const TextStyle(
               fontWeight: FontWeight.bold, color: AppColors.primary))),
-      DataCell(Text("$dispatch")),
-      DataCell(Text("$success")),
-      DataCell(Text("$failed")),
+      DataCell(
+        Text("$dispatch"),
+        onTap: () => Get.toNamed(AppRoutes.summaryList, arguments: {
+          'category': type,
+          'status': 'DISPATCH',
+        }),
+      ),
+      DataCell(
+        Text("$success"),
+        onTap: () => Get.toNamed(AppRoutes.summaryList, arguments: {
+          'category': type,
+          'status': 'SUCCESS',
+        }),
+      ),
+      DataCell(
+        Text("$failed"),
+        onTap: () => Get.toNamed(AppRoutes.summaryList, arguments: {
+          'category': type,
+          'status': 'FAILED',
+        }),
+      ),
       DataCell(Text("${percent.toStringAsFixed(0)}%")),
     ]);
   }

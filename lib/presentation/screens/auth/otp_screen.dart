@@ -76,7 +76,7 @@ class OtpScreen extends StatelessWidget {
             const SizedBox(height: 50),
             Center(
               child: Pinput(
-                length: 6,
+                length: 4,
                 controller: controller.otpController,
                 defaultPinTheme: defaultPinTheme,
                 focusedPinTheme: focusedPinTheme,
