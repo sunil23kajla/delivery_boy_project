@@ -1,12 +1,13 @@
 import 'dart:io';
+
+import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/repository/shipment_repository.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:delivery_boy/core/constants/app_routes.dart';
-import 'package:delivery_boy/data/repository/shipment_repository.dart';
-import 'package:delivery_boy/presentation/controllers/base_controller.dart';
-import 'package:delivery_boy/core/services/session_service.dart';
 
 enum RtStep {
   details, // Column 1: Tracking/Order Info + Mark Buttons
@@ -71,13 +72,30 @@ class RtFlowController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    shipment = Get.arguments ?? {};
+
+    final args = Get.arguments;
+    if (args != null && args.runtimeType.toString() == 'OrderModel') {
+      final order = args;
+      shipment = {
+        'id': order.id,
+        'orderId': order.orderNumber ?? order.id?.toString(),
+        'barcode': order.orderNumber,
+        'product': order.items?.isNotEmpty == true
+            ? order.items!.first.productName
+            : "Product Details N/A",
+        'name': order.customer?.name,
+        'phone': order.customer?.mobile,
+      };
+    } else {
+      shipment = args is Map<String, dynamic> ? args : {};
+    }
 
     // Fallback static data
     if (shipment['barcode'] == null) shipment['barcode'] = "TKSH-RT-77210";
     if (shipment['orderId'] == null) shipment['orderId'] = "ORD-RT-9902";
-    if (shipment['product'] == null)
+    if (shipment['product'] == null) {
       shipment['product'] = "MacBook Pro M2 Cover (Slate)";
+    }
 
     otpController.addListener(() => otpText.value = otpController.text);
     cancelOtpController

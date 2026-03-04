@@ -1,8 +1,9 @@
+import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
 import '../fm_flow_controller.dart';
-import 'package:delivery_boy/core/constants/app_colors.dart';
 
 class FmScanView extends GetView<FmFlowController> {
   const FmScanView({super.key});
@@ -71,6 +72,24 @@ class FmScanView extends GetView<FmFlowController> {
           ),
           const SizedBox(width: 15),
           Expanded(
+            child: OutlinedButton(
+              onPressed: () {
+                controller.scannedBarcode.value = ""; // Clear just in case
+                controller.nextStep(); // This triggers skip logic
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                side: const BorderSide(color: Colors.orange),
+              ),
+              child: const Text("SKIP",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.orange)),
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
             child: Obx(() => ElevatedButton(
                   onPressed: controller.scannedBarcode.value.isNotEmpty
                       ? controller.nextStep
@@ -81,7 +100,7 @@ class FmScanView extends GetView<FmFlowController> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text("COMPLETE",
+                  child: const Text("NEXT",
                       style: TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold)),
                 )),

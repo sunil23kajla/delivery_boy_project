@@ -1,7 +1,8 @@
+import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../fm_flow_controller.dart';
-import 'package:delivery_boy/core/constants/app_colors.dart';
 
 class FmDetailsView extends GetView<FmFlowController> {
   const FmDetailsView({super.key});
@@ -28,10 +29,33 @@ class FmDetailsView extends GetView<FmFlowController> {
                 const SizedBox(height: 30),
                 const Divider(),
                 const SizedBox(height: 20),
-                _buildChecklistRow(
-                    "PRODUCT VISIBLE", controller.isProductVisible),
-                const SizedBox(height: 15),
-                _buildChecklistRow("WEIGH MATCH", controller.isWeightMatch),
+                Obx(() {
+                  if (!controller.isQuestionsFetched.value) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (controller.questions.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text("No checklist questions for this order.",
+                            style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    );
+                  }
+                  return Column(
+                    children: controller.questions.map((q) {
+                      final qId = q['id'] ?? q['question_id'];
+                      final qText =
+                          q['question'] ?? q['question_text'] ?? "Question?";
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: _buildDynamicChecklistRow(qText, qId),
+                      );
+                    }).toList(),
+                  );
+                }),
                 const SizedBox(height: 30),
               ],
             ),
@@ -67,28 +91,32 @@ class FmDetailsView extends GetView<FmFlowController> {
     );
   }
 
-  Widget _buildChecklistRow(String label, Rxn<bool> obs) {
+  Widget _buildDynamicChecklistRow(String label, int questionId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 10),
-        Obx(() => Row(
-              children: [
-                _buildCheckButton("YES", true, obs),
-                const SizedBox(width: 20),
-                _buildCheckButton("NO", false, obs),
-              ],
-            )),
+        Obx(() {
+          final currentAnswer = controller.answers[questionId];
+          return Row(
+            children: [
+              _buildCheckButton("YES", currentAnswer == "yes",
+                  () => controller.answers[questionId] = "yes"),
+              const SizedBox(width: 20),
+              _buildCheckButton("NO", currentAnswer == "no",
+                  () => controller.answers[questionId] = "no"),
+            ],
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildCheckButton(String label, bool value, Rxn<bool> obs) {
-    final isSelected = obs.value == value;
+  Widget _buildCheckButton(String label, bool isSelected, VoidCallback onTap) {
     return InkWell(
-      onTap: () => obs.value = value,
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
@@ -138,10 +166,10 @@ class FmDetailsView extends GetView<FmFlowController> {
           const SizedBox(width: 15),
           Expanded(
             child: Obx(() => ElevatedButton(
-                  onPressed: (controller.isProductVisible.value != null &&
-                          controller.isWeightMatch.value != null)
-                      ? controller.nextStep
-                      : null,
+                  onPressed:
+                      (controller.answers.length == controller.questions.length)
+                          ? controller.nextStep
+                          : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 15),
@@ -149,7 +177,7 @@ class FmDetailsView extends GetView<FmFlowController> {
                         borderRadius: BorderRadius.circular(10)),
                     disabledBackgroundColor: Colors.grey.shade300,
                   ),
-                  child: const Text("MARK PICKUP",
+                  child: const Text("NEXT",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

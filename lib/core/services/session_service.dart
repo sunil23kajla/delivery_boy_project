@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:delivery_boy/data/models/user_model.dart';
@@ -31,7 +32,7 @@ class SessionService extends GetxService {
       try {
         _user.value = UserModel.fromJson(jsonDecode(userJson));
       } catch (e) {
-        print('Error decoding user session: $e');
+        debugPrint('Error decoding user session: $e');
       }
     }
   }

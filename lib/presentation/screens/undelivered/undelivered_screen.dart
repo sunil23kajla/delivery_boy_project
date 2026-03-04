@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pinput/pinput.dart';
-import 'undelivered_controller.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../widgets/custom_button.dart';
+import 'undelivered_controller.dart';
 
 class UndeliveredScreen extends StatelessWidget {
   const UndeliveredScreen({super.key});
@@ -63,40 +64,63 @@ class UndeliveredScreen extends StatelessWidget {
                 color: AppColors.textSecondary),
           ),
           const SizedBox(height: 15),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Column(
-              children: List.generate(controller.reasons.length, (index) {
-                return Column(
-                  children: [
-                    RadioListTile<int>(
-                      title: Text(
-                        controller.reasons[index],
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600),
+          Obx(() {
+            if (controller.isLoading) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            if (controller.undeliveryReasons.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text("No reasons found"),
+                ),
+              );
+            }
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Column(
+                children:
+                    List.generate(controller.undeliveryReasons.length, (index) {
+                  final reasonObj = controller.undeliveryReasons[index];
+                  final reasonName =
+                      reasonObj['reason']?.toString() ?? 'Unknown';
+
+                  return Column(
+                    children: [
+                      RadioListTile<int>(
+                        title: Text(
+                          reasonName,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        value: index,
+                        groupValue: controller.selectedReasonIndex.value,
+                        onChanged: (value) =>
+                            controller.selectedReasonIndex.value = value!,
+                        activeColor: AppColors.primary,
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 10),
                       ),
-                      value: index,
-                      groupValue: controller.selectedReasonIndex.value,
-                      onChanged: (value) =>
-                          controller.selectedReasonIndex.value = value!,
-                      activeColor: AppColors.primary,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 10),
-                    ),
-                    if (index < controller.reasons.length - 1)
-                      Divider(
-                          height: 1,
-                          color: Colors.grey.shade100,
-                          indent: 20,
-                          endIndent: 20),
-                  ],
-                );
-              }),
-            ),
-          ),
+                      if (index < controller.undeliveryReasons.length - 1)
+                        Divider(
+                            height: 1,
+                            color: Colors.grey.shade100,
+                            indent: 20,
+                            endIndent: 20),
+                    ],
+                  );
+                }),
+              ),
+            );
+          }),
           const SizedBox(height: 20),
         ],
       ),
@@ -104,13 +128,22 @@ class UndeliveredScreen extends StatelessWidget {
   }
 
   Widget _buildActionStep(double width, UndeliveredController controller) {
+    final reasonName = controller.selectedReasonIndex.value >= 0 &&
+            controller.selectedReasonIndex.value <
+                controller.undeliveryReasons.length
+        ? controller.undeliveryReasons[controller.selectedReasonIndex.value]
+                    ['reason']
+                ?.toString() ??
+            'Selected Reason'
+        : 'Selected Reason';
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(width * 0.07),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            controller.reasons[controller.selectedReasonIndex.value],
+            reasonName,
             style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

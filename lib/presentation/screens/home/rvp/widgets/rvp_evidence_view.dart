@@ -1,7 +1,8 @@
+import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../rvp_flow_controller.dart';
-import 'package:delivery_boy/core/constants/app_colors.dart';
 
 class RvpEvidenceView extends GetView<RvpFlowController> {
   const RvpEvidenceView({super.key});
@@ -19,7 +20,7 @@ class RvpEvidenceView extends GetView<RvpFlowController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "CLICK 3-4 IMAGES THEN APP WILL SHOW YOU CAN PICK-UP PRODUCT OR NOT",
+                  "CLICK UPTO 4 IMAGES THEN APP WILL ALLOW YOU PICK-UP",
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -59,41 +60,12 @@ class RvpEvidenceView extends GetView<RvpFlowController> {
                       ],
                     )),
                 const SizedBox(height: 30),
-                Obx(() => controller.evidenceImages.length >= 3
-                    ? Column(
-                        children: [
-                          _buildActionButton("PICKUP PRODUCT", Colors.green,
-                              controller.nextStep),
-                          const SizedBox(height: 15),
-                          _buildActionButton("DON'T PICKUP PRODUCT", Colors.red,
-                              controller.startCancelFlow),
-                        ],
-                      )
-                    : const SizedBox.shrink()),
               ],
             ),
           ),
         ),
         _buildFooter(width),
       ],
-    );
-  }
-
-  Widget _buildActionButton(String label, Color color, VoidCallback onTap) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        child: Text(label,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
     );
   }
 
@@ -106,25 +78,48 @@ class RvpEvidenceView extends GetView<RvpFlowController> {
             blurRadius: 10,
             offset: const Offset(0, -5))
       ]),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: controller.previousStep,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                side: const BorderSide(color: AppColors.textSecondary),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+          // The API Complete Button logic mapping single action directly
+          Obx(() => SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: controller.evidenceImages.isEmpty
+                      ? null
+                      : controller.nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: controller.evidenceImages.isEmpty
+                        ? Colors.grey
+                        : Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("SUBMIT API & PICKUP",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              )),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: controller.previousStep,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    side: const BorderSide(color: AppColors.textSecondary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text("BACK",
+                      style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.bold)),
+                ),
               ),
-              child: const Text("BACK",
-                  style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.bold)),
-            ),
+            ],
           ),
-          const SizedBox(width: 15),
-          const Expanded(child: SizedBox()), // Placeholder for balance
         ],
       ),
     );

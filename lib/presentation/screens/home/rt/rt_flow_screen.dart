@@ -41,8 +41,9 @@ class RtFlowScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(right: 15),
               child: Obx(() {
-                if (controller.isCancelFlow.value)
+                if (controller.isCancelFlow.value) {
                   return const SizedBox.shrink();
+                }
                 return Text(
                   "STEP ${controller.currentStep.value.index + 1}/6",
                   style: const TextStyle(

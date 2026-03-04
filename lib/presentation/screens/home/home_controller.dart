@@ -1,199 +1,344 @@
+import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
+import 'package:delivery_boy/data/repository/shipment_repository.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class HomeController extends GetxController {
+class HomeController extends BaseController {
+  final ShipmentRepository _shipmentRepository = Get.find<ShipmentRepository>();
+  final SessionService _sessionService = Get.find<SessionService>();
+
   final rxIndex = 0.obs;
   final rxSelectedFilter = 'All'.obs;
+  final rxSearchText = ''.obs;
+  final rxDeliveryManName = ''.obs;
+  final shipments = <OrderModel>[].obs;
+
+  // Pagination fields
+  int currentPage = 1;
+  int lastPage = 1;
+  var isFetchingMore = false.obs;
+  final ScrollController scrollController = ScrollController();
+
+  // Static tab counts to preserve them when filtering from backend
+  final tabCountAll = 0.obs;
+  final tabCountFwd = 0.obs;
+  final tabCountRvp = 0.obs;
+  final tabCountRt = 0.obs;
+  final tabCountFm = 0.obs;
+
+  // Dashboard Counts
+  final rxTotalCount = 0.obs;
+  final rxDeliveredCount = 0.obs;
+  final rxPendingCount = 0.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    scrollController.addListener(_scrollListener);
+    fetchOrders();
+  }
+
+  void _scrollListener() {
+    if (scrollController.position.pixels >=
+            scrollController.position.maxScrollExtent - 200 &&
+        !isLoading &&
+        !isFetchingMore.value) {
+      loadMoreOrders();
+    }
+  }
+
+  Future<void> fetchOrders({bool showLoadingIndicator = true}) async {
+    try {
+      currentPage = 1;
+      if (showLoadingIndicator) {
+        shipments.clear();
+        showLoading();
+      }
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.getOrderListing(
+        page: currentPage,
+        token: token,
+        status: rxSelectedFilter.value,
+      );
+
+      if (response['success'] == false) {
+        if (showLoadingIndicator) hideLoading();
+        handleError(response['message'] ?? "Failed to fetch orders");
+        return;
+      }
+
+      if (response['success'] == true && response['data'] != null) {
+        final rawData = response['data'];
+        List<dynamic> orderList = [];
+
+        if (rawData is Map) {
+          // Parse delivery man name
+          if (rawData['delivery_man'] != null) {
+            rxDeliveryManName.value = rawData['delivery_man']['name'] ?? '';
+          }
+
+          // Parse dashboard counts with robust fallback keys
+          rxTotalCount.value = rawData['total_orders'] ??
+              rawData['total'] ??
+              response['total_orders'] ??
+              response['total'] ??
+              0;
+          rxDeliveredCount.value = rawData['delivered_orders'] ??
+              rawData['delivered'] ??
+              response['delivered_orders'] ??
+              response['delivered'] ??
+              0;
+          rxPendingCount.value = rawData['pending_orders'] ??
+              rawData['pending'] ??
+              response['pending_orders'] ??
+              response['pending'] ??
+              0;
+
+          // Nested under 'orders' key (actual API format)
+          if (rawData['orders'] != null) {
+            orderList = rawData['orders'] is List ? rawData['orders'] : [];
+          } else if (rawData['data'] != null) {
+            orderList = rawData['data'] is List ? rawData['data'] : [];
+          }
+        } else if (rawData is List) {
+          orderList = rawData;
+        }
+
+        if (rawData is Map && rawData['pagination'] != null) {
+          currentPage = rawData['pagination']['current_page'] ?? 1;
+          lastPage = rawData['pagination']['last_page'] ?? 1;
+
+          final apiTotal = rawData['pagination']['total'] ?? 0;
+          if (apiTotal > 0 && rxSelectedFilter.value == 'All') {
+            rxTotalCount.value = apiTotal;
+          }
+        }
+
+        shipments
+            .assignAll(orderList.map((e) => OrderModel.fromJson(e)).toList());
+
+        // Update tab counts only when we fetch 'All' data, so they are preserved
+        if (rxSelectedFilter.value == 'All') {
+          tabCountAll.value = rxTotalCount.value;
+          tabCountFwd.value = shipments
+              .where((s) => ['FWD', 'NORMAL', 'FORWARD']
+                  .contains((s.orderType ?? '').toUpperCase()))
+              .length;
+          tabCountRvp.value = shipments
+              .where((s) => ['RVP', 'REVERSE', 'REVERSE_PICKUP']
+                  .contains((s.orderType ?? '').toUpperCase()))
+              .length;
+          tabCountRt.value = shipments
+              .where((s) =>
+                  ['RT', 'RETURN'].contains((s.orderType ?? '').toUpperCase()))
+              .length;
+          tabCountFm.value = shipments
+              .where((s) => ['FM', 'FIRST_MILE', 'FIRSTMILE']
+                  .contains((s.orderType ?? '').toUpperCase()))
+              .length;
+        }
+
+        // Fallback: If counts are still 0 but we have shipments, calculate from list
+        if (rxTotalCount.value == 0 && tabCountAll.value > 0) {
+          rxTotalCount.value = tabCountAll.value;
+        }
+        if (rxPendingCount.value == 0 && tabCountAll.value > 0) {
+          rxPendingCount.value = tabCountAll.value;
+        }
+      }
+      if (showLoadingIndicator) hideLoading();
+    } catch (e) {
+      if (showLoadingIndicator) hideLoading();
+      handleError(e);
+    }
+  }
+
+  Future<void> loadMoreOrders() async {
+    if (currentPage >= lastPage) return; // Reached the end
+
+    try {
+      isFetchingMore.value = true;
+      currentPage++;
+      final token = _sessionService.token ?? "";
+
+      final response = await _shipmentRepository.getOrderListing(
+        page: currentPage,
+        token: token,
+        status: rxSelectedFilter.value,
+      );
+
+      if (response['success'] == false) {
+        isFetchingMore.value = false;
+        currentPage--;
+        handleError(response['message'] ?? "Failed to load more orders");
+        return;
+      }
+
+      if (response['success'] == true && response['data'] != null) {
+        final rawData = response['data'];
+        List<dynamic> orderList = [];
+
+        if (rawData is Map) {
+          if (rawData['orders'] != null) {
+            orderList = rawData['orders'] is List ? rawData['orders'] : [];
+          } else if (rawData['data'] != null) {
+            orderList = rawData['data'] is List ? rawData['data'] : [];
+          }
+
+          if (rawData['pagination'] != null) {
+            currentPage = rawData['pagination']['current_page'] ?? currentPage;
+            lastPage = rawData['pagination']['last_page'] ?? lastPage;
+          }
+        } else if (rawData is List) {
+          orderList = rawData;
+        }
+
+        final newOrders = orderList.map((e) => OrderModel.fromJson(e)).toList();
+        shipments.addAll(newOrders);
+      }
+      isFetchingMore.value = false;
+    } catch (e) {
+      isFetchingMore.value = false;
+      currentPage--; // Rollback page count on error
+      handleError(e);
+    }
+  }
 
   void changeTabIndex(int index) {
     rxIndex.value = index;
   }
 
   void selectFilter(String filter) {
-    rxSelectedFilter.value = filter;
+    if (rxSelectedFilter.value != filter) {
+      rxSelectedFilter.value = filter;
+      fetchOrders();
+    }
   }
 
-  // Mock shipment data with delivery_status (SUCCESS, FAILED, DISPATCH)
-  final shipments = <Map<String, dynamic>>[
-    {
-      'tracking_id': 'SK45621',
-      'order_id': 'ORD-1001',
-      'name': 'Sunil Kumar',
-      'phone': '9876543210',
-      'lat': 28.6139,
-      'lng': 77.2090,
-      'address': '123, Street Name, Delhi',
-      'type': 'COD',
-      'amount': '500.00',
-      'status': 'FWD',
-      'delivery_status': 'SUCCESS',
-      'items': [
-        {'name': 'Sneakers (Size 9)', 'qty': '1'},
-        {'name': 'Sports Socks', 'qty': '3'},
-      ],
-    },
-    {
-      'tracking_id': 'SK45622',
-      'order_id': 'ORD-1002',
-      'name': 'Amit Raj',
-      'phone': '9876543211',
-      'lat': 28.6138,
-      'lng': 77.2091,
-      'address': 'Sector 15, Rohini',
-      'type': 'Prepaid',
-      'amount': '450.00',
-      'status': 'FWD',
-      'delivery_status': 'SUCCESS',
-      'items': [
-        {'name': 'Formal Shirt (L)', 'qty': '2'},
-      ],
-    },
-    {
-      'tracking_id': 'SK45623',
-      'order_id': 'ORD-1003',
-      'name': 'Vijay Pal',
-      'phone': '9876543212',
-      'lat': 28.6137,
-      'lng': 77.2092,
-      'address': 'Pitampura, Delhi',
-      'type': 'COD',
-      'amount': '300.00',
-      'status': 'FWD',
-      'delivery_status': 'FAILED',
-      'items': [
-        {'name': 'Bluetooth Earphones', 'qty': '1'},
-      ],
-    },
-    {
-      'tracking_id': 'SK98745',
-      'order_id': 'ORD-2001',
-      'name': 'Rahul Sharma',
-      'phone': '9123456789',
-      'lat': 19.0760,
-      'lng': 72.8777,
-      'address': '456, Area Name, Mumbai',
-      'type': 'Prepaid',
-      'amount': '800.00',
-      'status': 'RVP',
-      'delivery_status': 'SUCCESS',
-      'items': [
-        {'name': 'Kurta Set', 'qty': '1'},
-        {'name': 'Dupatta', 'qty': '2'},
-      ],
-    },
-    {
-      'tracking_id': 'SK98746',
-      'order_id': 'ORD-2002',
-      'name': 'Sanjay Gupta',
-      'phone': '9123456780',
-      'lat': 19.0761,
-      'lng': 72.8778,
-      'address': 'Bandra West, Mumbai',
-      'type': 'COD',
-      'amount': '1200.00',
-      'status': 'RVP',
-      'delivery_status': 'DISPATCH',
-      'items': [
-        {'name': 'Mobile Phone', 'qty': '1'},
-        {'name': 'Phone Cover', 'qty': '1'},
-      ],
-    },
-    {
-      'tracking_id': 'SK98747',
-      'order_id': 'ORD-2003',
-      'name': 'Karan Singh',
-      'phone': '9123456781',
-      'lat': 19.0762,
-      'lng': 72.8779,
-      'address': 'Andheri, Mumbai',
-      'type': 'Prepaid',
-      'amount': '950.00',
-      'status': 'RVP',
-      'delivery_status': 'SUCCESS',
-      'items': [
-        {'name': 'Running Shoes', 'qty': '1'},
-      ],
-    },
-    {
-      'tracking_id': 'SK65412',
-      'order_id': 'ORD-3001',
-      'name': 'Deepak Singh',
-      'phone': '8877665544',
-      'lat': 12.9716,
-      'lng': 77.5946,
-      'address': '789, Road 5, Bangalore',
-      'type': 'COD',
-      'amount': '1200.00',
-      'status': 'RT',
-      'delivery_status': 'FAILED',
-      'items': [
-        {'name': 'Laptop Bag', 'qty': '1'},
-      ],
-    },
-    {
-      'tracking_id': 'SK65413',
-      'order_id': 'ORD-3002',
-      'name': 'Pankaj Mourya',
-      'phone': '8877665545',
-      'lat': 12.9717,
-      'lng': 77.5947,
-      'address': 'HSR Layout, Bangalore',
-      'type': 'Prepaid',
-      'amount': '700.00',
-      'status': 'RT',
-      'delivery_status': 'DISPATCH',
-      'items': [
-        {'name': 'Jeans (32)', 'qty': '1'},
-        {'name': 'T-Shirt (M)', 'qty': '2'},
-      ],
-    },
-    {
-      'tracking_id': 'SK32145',
-      'order_id': 'ORD-4001',
-      'name': 'Mohit Verma',
-      'phone': '7011223344',
-      'status': 'FM',
-      'delivery_status': 'SUCCESS',
-      'address': 'Jaipur, Rajasthan',
-      'type': 'COD',
-      'amount': '400.00',
-      'items': [
-        {'name': 'Perfume Bottle', 'qty': '1'},
-      ],
-    },
-  ].obs;
-
-  List<Map<String, dynamic>> get filteredShipments {
-    if (rxSelectedFilter.value == 'All') {
-      return shipments;
+  String resolveCategory(OrderModel shipment) {
+    final type = (shipment.orderType ?? '').toLowerCase();
+    switch (type) {
+      case 'rvp':
+      case 'reverse':
+      case 'reverse_pickup':
+        return 'RVP'; // Fallback if type is filled but object is missing
+      case 'rt':
+      case 'return':
+        return 'RT';
+      case 'fm':
+      case 'first_mile':
+      case 'firstmile':
+        return 'FM';
+      case 'normal':
+      case 'fwd':
+      case 'forward':
+      default:
+        // Try to identify from raw string if not matching anything above
+        return type.isNotEmpty ? type.toUpperCase() : 'FWD';
     }
-    return shipments
-        .where((s) => s['status'] == rxSelectedFilter.value)
-        .toList();
+  }
+
+  List<OrderModel> get filteredShipments {
+    List<OrderModel> list = shipments.toList();
+
+    // Filter by search text (name or tracking_id)
+    if (rxSearchText.value.isNotEmpty) {
+      final query = rxSearchText.value.toLowerCase();
+      list = list.where((s) {
+        final name = (s.customer?.name ?? '').toLowerCase();
+        final trackingId = (s.orderNumber ?? '').toLowerCase();
+        return name.contains(query) || trackingId.contains(query);
+      }).toList();
+    }
+
+    return list;
   }
 
   int getCount(String status) {
-    if (status == 'All') return shipments.length;
-    return shipments.where((s) => s['status'] == status).length;
+    if (tabCountAll.value == 0 &&
+        rxSelectedFilter.value == 'All' &&
+        !isLoading) {
+      // Fallback before first 'All' is fully parsed
+      if (status == 'All') return shipments.length;
+      return shipments.where((s) => resolveCategory(s) == status).length;
+    }
+
+    switch (status) {
+      case 'All':
+        return tabCountAll.value;
+      case 'FWD':
+        return tabCountFwd.value;
+      case 'RVP':
+        return tabCountRvp.value;
+      case 'RT':
+        return tabCountRt.value;
+      case 'FM':
+        return tabCountFm.value;
+      default:
+        return 0;
+    }
   }
 
   // --- Summary Flow Methods ---
 
-  int getSummaryCount(String category, String deliveryStatus) {
+  int getSummaryCount(String category, String status) {
     return shipments.where((s) {
-      final matchesCategory = (category == "ALL") || (s['status'] == category);
-      final matchesStatus = (deliveryStatus == "DISPATCH") ||
-          (s['delivery_status'] == deliveryStatus);
+      final matchesCategory =
+          (category == "ALL") || (resolveCategory(s) == category);
+      final currentStatus = (s.orderStatus ?? '').toUpperCase();
+
+      bool matchesStatus = false;
+      if (status == "DISPATCH") {
+        matchesStatus = currentStatus == "DISPATCH" ||
+            currentStatus == "SHIPPED" ||
+            currentStatus == "OUT_FOR_DELIVERY" ||
+            currentStatus == "ASSIGNED" ||
+            currentStatus == "READY_FOR_PICKUP";
+      } else if (status == "SUCCESS") {
+        matchesStatus = currentStatus == "DELIVERED";
+      } else if (status == "FAILED") {
+        matchesStatus = currentStatus == "CANCELLED" ||
+            currentStatus == "UNDELIVERED" ||
+            currentStatus == "RETURNED";
+      }
+
       return matchesCategory && matchesStatus;
     }).length;
   }
 
-  List<Map<String, dynamic>> getSummaryList(
-      String category, String deliveryStatus) {
+  List<OrderModel> getSummaryList(String category, String status) {
     return shipments.where((s) {
-      final matchesCategory = (category == "ALL") || (s['status'] == category);
-      final matchesStatus = (deliveryStatus == "DISPATCH") ||
-          (s['delivery_status'] == deliveryStatus);
+      final matchesCategory =
+          (category == "ALL") || (resolveCategory(s) == category);
+      final currentStatus = (s.orderStatus ?? '').toUpperCase();
+
+      bool matchesStatus = false;
+      if (status == "DISPATCH") {
+        matchesStatus = currentStatus == "DISPATCH" ||
+            currentStatus == "SHIPPED" ||
+            currentStatus == "OUT_FOR_DELIVERY" ||
+            currentStatus == "ASSIGNED" ||
+            currentStatus == "READY_FOR_PICKUP";
+      } else if (status == "SUCCESS") {
+        matchesStatus = currentStatus == "DELIVERED";
+      } else if (status == "FAILED") {
+        matchesStatus = currentStatus == "CANCELLED" ||
+            currentStatus == "UNDELIVERED" ||
+            currentStatus == "RETURNED";
+      }
+
       return matchesCategory && matchesStatus;
     }).toList();
+  }
+
+  @override
+  void onClose() {
+    scrollController.removeListener(_scrollListener);
+    // We defer actual .dispose() to avoid Flutter's
+    // "ScrollController used after being disposed"
+    // error when rapidly navigating away from Home.
+    super.onClose();
   }
 }

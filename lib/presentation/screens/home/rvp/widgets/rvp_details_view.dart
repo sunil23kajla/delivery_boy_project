@@ -1,7 +1,8 @@
+import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../rvp_flow_controller.dart';
-import 'package:delivery_boy/core/constants/app_colors.dart';
 
 class RvpDetailsView extends GetView<RvpFlowController> {
   const RvpDetailsView({super.key});
@@ -50,16 +51,21 @@ class RvpDetailsView extends GetView<RvpFlowController> {
                         fontWeight: FontWeight.bold,
                         color: AppColors.textSecondary)),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: controller.returnReasonController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: "Enter return reason details...",
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade200)),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: const Text(
+                    "STATIC REASON FROM API (TO BE IMPLEMENTED)",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],

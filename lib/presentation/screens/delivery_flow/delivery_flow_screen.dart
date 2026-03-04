@@ -74,6 +74,8 @@ class DeliveryFlowScreen extends StatelessWidget {
             return const DeliveryPaymentDetailsView();
           case DeliveryStep.images:
             return const DeliveryImageView();
+          default:
+            return const SizedBox.shrink();
         }
       }),
     );

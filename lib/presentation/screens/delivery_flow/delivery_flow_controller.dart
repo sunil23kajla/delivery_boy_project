@@ -1,10 +1,17 @@
 import 'dart:io';
+
+import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/core/constants/app_strings.dart';
+import 'package:delivery_boy/core/error/failure.dart';
+import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
+import 'package:delivery_boy/data/repository/shipment_repository.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
+import 'package:delivery_boy/presentation/screens/home/home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../../core/constants/app_strings.dart';
-import '../../../core/constants/app_routes.dart';
 
 enum DeliveryStep {
   scan,
@@ -16,8 +23,11 @@ enum DeliveryStep {
   images
 }
 
-class DeliveryFlowController extends GetxController {
-  late Map<String, dynamic> shipment;
+class DeliveryFlowController extends BaseController {
+  final ShipmentRepository _shipmentRepository = Get.find<ShipmentRepository>();
+  final SessionService _sessionService = Get.find<SessionService>();
+
+  late OrderModel shipment;
   var currentStep = DeliveryStep.scan.obs;
 
   // Scan Step
@@ -66,7 +76,14 @@ class DeliveryFlowController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    shipment = Get.arguments ?? {};
+    if (Get.arguments is OrderModel) {
+      shipment = Get.arguments;
+    } else {
+      // Fallback for safety
+      shipment = OrderModel();
+      Get.snackbar('Error', 'Invalid order data provided');
+    }
+
     otpController.addListener(() => otpText.value = otpController.text);
     recipientNameController
         .addListener(() => nameText.value = recipientNameController.text);
@@ -88,9 +105,9 @@ class DeliveryFlowController extends GetxController {
   // Image Step
   var images = <File>[].obs;
   final ImagePicker _picker = ImagePicker();
-  bool get isCod => shipment['status'] == 'FWD' && shipment['type'] == 'COD';
-  bool get isImageStepValid =>
-      images.length >= 2; // front + back required, customer optional
+
+  bool get isCod => (shipment.paymentMethod ?? '').toUpperCase() == 'COD';
+  bool get isImageStepValid => images.length >= 2; // front + back required
 
   void nextStep() {
     if (currentStep.value == DeliveryStep.scan) {
@@ -98,7 +115,7 @@ class DeliveryFlowController extends GetxController {
         if (scannedBarcode.value == "SKIPPED") {
           currentStep.value = DeliveryStep.options;
         } else {
-          currentStep.value = DeliveryStep.otp;
+          verifyQrCode();
         }
       }
     } else if (currentStep.value == DeliveryStep.otp) {
@@ -112,8 +129,8 @@ class DeliveryFlowController extends GetxController {
       if (isOptionsStepValid) {
         // Pre-fill fields if customer is selected
         if (selectedRecipient.value == 'customer') {
-          recipientNameController.text = shipment['name'] ?? "";
-          recipientPhoneController.text = shipment['phone'] ?? "";
+          recipientNameController.text = shipment.customer?.name ?? "";
+          recipientPhoneController.text = shipment.customer?.mobile ?? "";
         } else {
           recipientNameController.clear();
           recipientPhoneController.clear();
@@ -130,6 +147,9 @@ class DeliveryFlowController extends GetxController {
       }
     } else if (currentStep.value == DeliveryStep.payment) {
       if (isPaymentStepValid) {
+        if (selectedPaymentMethod.value == 'upi') {
+          fetchPaymentDetails();
+        }
         currentStep.value = DeliveryStep.paymentDetails;
       }
     } else if (currentStep.value == DeliveryStep.paymentDetails) {
@@ -168,21 +188,204 @@ class DeliveryFlowController extends GetxController {
     }
   }
 
-  Future<void> pickImage() async {
-    if (images.length >= 3) return; // max 3: front, back, customer
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-    if (photo != null) {
-      images.add(File(photo.path));
+  // --- API Integration Methods ---
+
+  var paymentDetails = RxMap<String, dynamic>();
+
+  Future<void> verifyQrCode() async {
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) return;
+
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.verifyFwdQr(
+        orderId: orderId,
+        qrToken: scannedBarcode.value,
+        token: token,
+      );
+
+      if (response['success'] == true) {
+        hideLoading();
+        currentStep.value = DeliveryStep.otp;
+      } else {
+        hideLoading();
+        Get.snackbar(
+            "Error", response['message']?.toString() ?? "Failed to verify QR",
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade900);
+      }
+    } catch (e) {
+      hideLoading();
+      Get.snackbar(
+        AppStrings.error,
+        e
+            .toString()
+            .replaceAll('Exception: ', '')
+            .replaceAll('ClientException: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+        duration: const Duration(seconds: 4),
+      );
+      handleError(e);
     }
   }
 
-  void finishDelivery() {
+  Future<void> fetchPaymentDetails() async {
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) return;
+
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.receiveFwdPayment(
+        orderId: orderId,
+        paymentMode: 'upi',
+        token: token,
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        paymentDetails.assignAll(Map<String, dynamic>.from(response['data']));
+      } else if (response['success'] == false) {
+        Get.snackbar(
+            "Error",
+            response['message']?.toString() ??
+                "Failed to receive payment details",
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade900);
+      }
+      hideLoading();
+    } catch (e) {
+      hideLoading();
+      Get.snackbar(
+        AppStrings.error,
+        e
+            .toString()
+            .replaceAll('Exception: ', '')
+            .replaceAll('ClientException: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+        duration: const Duration(seconds: 4),
+      );
+      handleError(e);
+    }
+  }
+
+  Future<void> verifyUpiPayment() async {
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) return;
+
+      showLoading();
+      final token = _sessionService.token ?? "";
+
+      final razorpayOrderId = paymentDetails['payment'] != null
+          ? paymentDetails['payment']['razorpay_order_id']?.toString()
+          : paymentDetails['razorpay_order_id']?.toString();
+
+      final response = await _shipmentRepository.verifyFwdPayment(
+        orderId: orderId,
+        razorpayOrderId: razorpayOrderId ?? "",
+        razorpayPaymentId: "pay_placeholder", // This should come from SDK
+        razorpaySignature: "sig_placeholder", // This should come from SDK
+        token: token,
+      );
+
+      if (response['success'] == true) {
+        isPaymentVerified.value = true;
+        Get.snackbar("Success", "Payment verified successfully!");
+      } else if (response['success'] == false) {
+        Get.snackbar("Error",
+            response['message']?.toString() ?? "Payment verification failed",
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade900);
+      }
+      hideLoading();
+    } catch (e) {
+      hideLoading();
+      Get.snackbar(
+        AppStrings.error,
+        e
+            .toString()
+            .replaceAll('Exception: ', '')
+            .replaceAll('ClientException: ', ''),
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+        duration: const Duration(seconds: 4),
+      );
+      handleError(e);
+    }
+  }
+
+  Future<void> finishDelivery() async {
+    if (isLoading) return; // Prevent double calls
+
     if (images.length < 2) {
       Get.snackbar(AppStrings.error,
           "Please add at least 2 images (Front & Back) for proof");
       return;
     }
 
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) {
+        Get.snackbar("Error", "Order ID not found");
+        return;
+      }
+
+      showLoading();
+      final token = _sessionService.token ?? "";
+
+      final response = await _shipmentRepository.completeFwdDelivery(
+        orderId: orderId,
+        recipientName: recipientNameController.text,
+        recipientMobile: recipientPhoneController.text,
+        notes: otherAddressController.text,
+        photos: images.toList(),
+        token: token,
+      );
+
+      if (response['success'] == true) {
+        hideLoading();
+        _showResponseDialog(
+            response['message'] ?? "Delivery Completed Successfully",
+            isSuccess: true);
+      } else {
+        hideLoading();
+        _showResponseDialog(
+            response['message'] ?? "Failed to complete delivery",
+            isSuccess: false);
+      }
+    } catch (e) {
+      hideLoading();
+      String message = e.toString();
+      if (e is AppException) {
+        message = e.message;
+      }
+      _showResponseDialog(message, isSuccess: false);
+    }
+  }
+
+  Future<void> pickImage(int index) async {
+    final XFile? photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 50, // Compress image quality to 50%
+      maxWidth: 1024, // Max width to reduce file size
+      maxHeight: 1024, // Max height to reduce file size
+    );
+    if (photo != null) {
+      if (index < images.length) {
+        images[index] = File(photo.path);
+      } else {
+        images.add(File(photo.path));
+      }
+    }
+  }
+
+  void _showResponseDialog(String message, {bool isSuccess = true}) {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -191,26 +394,37 @@ class DeliveryFlowController extends GetxController {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 80),
+              Icon(
+                isSuccess ? Icons.check_circle : Icons.error,
+                color: isSuccess ? Colors.green : Colors.red,
+                size: 80,
+              ),
               const SizedBox(height: 20),
               Text(
-                AppStrings.success,
+                isSuccess ? AppStrings.success : "Status",
                 style:
                     const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              const Text(
-                "Delivery Completed Successfully",
+              Text(
+                message,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Get.offAllNamed(AppRoutes.home),
+                  onPressed: () {
+                    Get.offAllNamed(AppRoutes.home);
+                    // Ensure Home Screen data is refreshed after delivery
+                    if (Get.isRegistered<HomeController>()) {
+                      Get.find<HomeController>()
+                          .fetchOrders(showLoadingIndicator: true);
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: isSuccess ? Colors.green : Colors.red,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 15),

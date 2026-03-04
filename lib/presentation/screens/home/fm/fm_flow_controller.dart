@@ -1,17 +1,19 @@
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/repository/shipment_repository.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:delivery_boy/core/constants/app_routes.dart';
-import 'package:delivery_boy/data/repository/shipment_repository.dart';
-import 'package:delivery_boy/presentation/controllers/base_controller.dart';
-import 'package:delivery_boy/core/services/session_service.dart';
 
 enum FmStep {
-  details, // Step 1: Info + Checklist (Product/Weight)
-  images, // Step 2: 2 Images (Front/Back)
-  scan, // Step 3: Scan QR/Barcode
+  details, // Step 1: Info + Dynamic Questions
+  scan, // Step 2: Scan QR/Barcode
+  images, // Step 3: 2 Images (Front/Back)
   complete // Success Popup
 }
 
@@ -35,17 +37,18 @@ class FmFlowController extends BaseController {
 
   // --- Success Flow State ---
 
-  // Step 1: Checklist
-  var isProductVisible = Rxn<bool>();
-  var isWeightMatch = Rxn<bool>();
+  // Step 1: Scan
+  var scannedBarcode = "".obs;
+  final scanController = MobileScannerController();
 
   // Step 2: Images
   var evidenceImages = <File?>[null, null].obs; // [Front, Back]
   final ImagePicker _picker = ImagePicker();
 
-  // Step 3: Scan
-  var scannedBarcode = "".obs;
-  final scanController = MobileScannerController();
+  // Step 1: Checklist (Dynamic Questions)
+  var questions = <Map<String, dynamic>>[].obs;
+  var answers = <int, String>{}.obs; // question_id -> 'yes'/'no'
+  var isQuestionsFetched = false.obs;
 
   // --- Cancellation Flow State ---
   var currentCancelStep = FmCancelStep.reasons.obs;
@@ -58,15 +61,35 @@ class FmFlowController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    shipment = Get.arguments ?? {};
+
+    // Fetch questions when controller initializes
+    _fetchQuestions();
+
+    final args = Get.arguments;
+    if (args != null && args.runtimeType.toString() == 'OrderModel') {
+      final order = args;
+      shipment = {
+        'id': order.id,
+        'orderId': order.orderNumber ?? order.id?.toString(),
+        'barcode': order.orderNumber,
+        'name': order.vendor?.vendorName ??
+            order.vendor?.shopName ??
+            order.customer?.name,
+        'address': order.deliveryAddress?.addressLine1 ?? 'Pickup Address N/A',
+      };
+    } else {
+      shipment = args is Map<String, dynamic> ? args : {};
+    }
 
     // Fallback static data
     if (shipment['barcode'] == null) shipment['barcode'] = "TKSH-FM-11022";
     if (shipment['orderId'] == null) shipment['orderId'] = "ORD-FM-5541";
-    if (shipment['name'] == null)
+    if (shipment['name'] == null) {
       shipment['name'] = "Seller: TechWorld Solutions";
-    if (shipment['address'] == null)
+    }
+    if (shipment['address'] == null) {
       shipment['address'] = "Industrial Area, Phase 2, Delhi";
+    }
 
     cancelOtpController
         .addListener(() => cancelOtpText.value = cancelOtpController.text);
@@ -74,7 +97,7 @@ class FmFlowController extends BaseController {
 
   // --- Navigation Logic ---
 
-  void nextStep() {
+  void nextStep() async {
     if (isCancelFlow.value) {
       _handleCancelNext();
       return;
@@ -82,24 +105,28 @@ class FmFlowController extends BaseController {
 
     switch (currentStep.value) {
       case FmStep.details:
-        if (isProductVisible.value != null && isWeightMatch.value != null) {
-          currentStep.value = FmStep.images;
+        if (answers.length == questions.length) {
+          if (questions.isNotEmpty) {
+            await _submitAnswersAndProceed();
+          } else {
+            currentStep.value = FmStep.scan;
+          }
         } else {
-          Get.snackbar("Error", "Please complete the checklist");
-        }
-        break;
-      case FmStep.images:
-        if (evidenceImages[0] != null && evidenceImages[1] != null) {
-          currentStep.value = FmStep.scan;
-        } else {
-          Get.snackbar("Error", "Front and Back images are mandatory");
+          Get.snackbar("Error", "Please answer all questions");
         }
         break;
       case FmStep.scan:
         if (scannedBarcode.value.isNotEmpty) {
-          _completePickup();
+          await _verifyQrAndProceed();
         } else {
-          Get.snackbar("Error", "Please scan to complete");
+          currentStep.value = FmStep.images; // Skip scan
+        }
+        break;
+      case FmStep.images:
+        if (evidenceImages[0] != null && evidenceImages[1] != null) {
+          await _uploadImagesAndComplete();
+        } else {
+          Get.snackbar("Error", "Front and Back images are mandatory");
         }
         break;
       case FmStep.complete:
@@ -108,18 +135,136 @@ class FmFlowController extends BaseController {
     }
   }
 
-  Future<void> _completePickup() async {
+  Future<void> _verifyQrAndProceed() async {
     try {
       showLoading();
-      final token = _sessionService.token ?? "placeholder_token";
-      await _shipmentRepository.updateOrderStatus(
-        orderId: shipment['orderId'].toString(),
-        status: "PICKED_UP",
+      final token = _sessionService.token ?? "";
+      final res = await _shipmentRepository.verifyFmQr(
+        orderId: shipment['id'].toString(),
+        qrCode: scannedBarcode.value,
         token: token,
       );
       hideLoading();
-      _showSuccessDialog();
+      if (res != null && res['success'] == false) {
+        Get.snackbar("Error", res['message']?.toString() ?? "Invalid QR");
+        return;
+      }
+      currentStep.value = FmStep.images;
     } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
+  }
+
+  Future<void> _uploadImagesAndComplete() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final nonNullImages = evidenceImages.whereType<File>().toList();
+      final res = await _shipmentRepository.uploadFmImages(
+        orderId: shipment['id'].toString(),
+        photos: nonNullImages,
+        token: token,
+      );
+      hideLoading();
+      if (res != null && res['success'] == false) {
+        _showResponseDialog(
+          title: "ERROR",
+          message: res['message']?.toString() ?? "Image Upload Failed",
+          isSuccess: false,
+          goHomeOnOk: false,
+        );
+        return;
+      }
+      await _completePickup();
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
+  }
+
+  Future<void> _fetchQuestions() async {
+    try {
+      final token = _sessionService.token ?? "";
+      final res = await _shipmentRepository.getFmQuestions(token: token);
+      if (res != null && res['success'] == true && res['data'] != null) {
+        final data = res['data'];
+        if (data is List) {
+          questions.assignAll(data.cast<Map<String, dynamic>>());
+        } else if (data['questions'] is List) {
+          questions.assignAll(
+              (data['questions'] as List).cast<Map<String, dynamic>>());
+        }
+      } else if (res != null && res['success'] == false) {
+        Get.snackbar(
+            "Error", res['message']?.toString() ?? "Failed to load questions");
+      }
+    } catch (e) {
+      handleError(e);
+    } finally {
+      isQuestionsFetched.value = true;
+    }
+  }
+
+  Future<void> _submitAnswersAndProceed() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "";
+
+      // Build answer array: [{"question_id": 1, "answer": "yes"}]
+      final answerList = answers.entries
+          .map((e) => {
+                "question_id": e.key,
+                "answer": e.value,
+              })
+          .toList();
+
+      final answersJson = jsonEncode(answerList);
+
+      final res = await _shipmentRepository.submitFmAnswers(
+        orderId: shipment['id'].toString(),
+        answersJson: answersJson,
+        token: token,
+      );
+      hideLoading();
+
+      if (res != null && res['success'] == false) {
+        Get.snackbar(
+            "Error", res['message']?.toString() ?? "Failed to save answers");
+        return;
+      }
+
+      currentStep.value = FmStep.scan;
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
+  }
+
+  Future<void> _completePickup() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final res = await _shipmentRepository.completeFm(
+        orderId: shipment['id'].toString(),
+        token: token,
+      );
+      hideLoading();
+      final isSuccess = res != null && res['success'] == true;
+      final message = res != null && res['message'] != null
+          ? res['message'].toString()
+          : (isSuccess
+              ? "Pickup Completed Successfully"
+              : "Failed to complete pickup");
+
+      _showResponseDialog(
+        title: isSuccess ? "SUCCESS" : "ERROR",
+        message: message,
+        isSuccess: isSuccess,
+        goHomeOnOk: true,
+      );
+    } catch (e) {
+      hideLoading();
       handleError(e);
     }
   }
@@ -138,11 +283,11 @@ class FmFlowController extends BaseController {
       case FmStep.details:
         Get.back();
         break;
-      case FmStep.images:
+      case FmStep.scan:
         currentStep.value = FmStep.details;
         break;
-      case FmStep.scan:
-        currentStep.value = FmStep.images;
+      case FmStep.images:
+        currentStep.value = FmStep.scan;
         break;
       case FmStep.complete:
         break;
@@ -236,14 +381,25 @@ class FmFlowController extends BaseController {
     );
   }
 
-  void _showSuccessDialog() {
+  void _showResponseDialog({
+    required String title,
+    required String message,
+    required bool isSuccess,
+    bool goHomeOnOk = true,
+  }) {
     Get.dialog(
       _buildActionPopup(
-        icon: Icons.check_circle,
-        iconColor: Colors.green,
-        title: "SUCCESS",
-        message: "Pickup Completed Successfully",
-        onOk: () => Get.offAllNamed(AppRoutes.home),
+        icon: isSuccess ? Icons.check_circle : Icons.error,
+        iconColor: isSuccess ? Colors.green : Colors.red,
+        title: title,
+        message: message,
+        onOk: () {
+          if (goHomeOnOk) {
+            Get.offAllNamed(AppRoutes.home);
+          } else {
+            Get.back(); // Just close dialog
+          }
+        },
       ),
       barrierDismissible: false,
     );

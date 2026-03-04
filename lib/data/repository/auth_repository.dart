@@ -33,4 +33,11 @@ class AuthRepository {
   Future<void> logout(String token) async {
     await apiClient.post(AppConstants.logoutEndpoint, token: token);
   }
+
+  Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
+    return await apiClient.post(
+      AppConstants.registrationEndpoint,
+      body: data,
+    );
+  }
 }

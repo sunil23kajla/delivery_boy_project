@@ -1,12 +1,11 @@
+import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'rvp_flow_controller.dart';
-import 'widgets/rvp_details_view.dart';
-import 'widgets/rvp_checklist_view.dart';
-import 'widgets/rvp_evidence_view.dart';
-import 'widgets/rvp_scan_view.dart';
 import 'widgets/rvp_cancel_view.dart';
-import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'widgets/rvp_details_view.dart';
+import 'widgets/rvp_evidence_view.dart';
 
 class RvpFlowScreen extends StatelessWidget {
   const RvpFlowScreen({super.key});
@@ -36,18 +35,14 @@ class RvpFlowScreen extends StatelessWidget {
             case RvpStep.details:
               title = "RVP Details";
               break;
-            case RvpStep.checklist:
-              title = "Checklist";
-              break;
             case RvpStep.evidence:
               title = "Evidence";
-              break;
-            case RvpStep.scan:
-              title = "Scan QR";
               break;
             case RvpStep.complete:
               title = "Completed";
               break;
+            default:
+              title = "RVP Flow";
           }
           return Text(title,
               style: const TextStyle(
@@ -60,16 +55,14 @@ class RvpFlowScreen extends StatelessWidget {
         switch (controller.currentStep.value) {
           case RvpStep.details:
             return const RvpDetailsView();
-          case RvpStep.checklist:
-            return const RvpChecklistView();
           case RvpStep.evidence:
             return const RvpEvidenceView();
-          case RvpStep.scan:
-            return const RvpScanView();
           case RvpStep.complete:
             return const Center(
                 child:
                     Icon(Icons.check_circle, size: 100, color: Colors.green));
+          default:
+            return const SizedBox.shrink();
         }
       }),
     );

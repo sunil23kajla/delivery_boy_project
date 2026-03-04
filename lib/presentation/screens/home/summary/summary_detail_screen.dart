@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 
 class SummaryDetailScreen extends StatelessWidget {
   const SummaryDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final shipment = Get.arguments as Map<String, dynamic>;
-    final status = shipment['delivery_status'] ?? 'DISPATCH';
+    final shipment = Get.arguments as OrderModel;
+    final status = (shipment.orderStatus ?? 'DISPATCH').toUpperCase();
 
     Color statusColor;
     switch (status) {
       case 'SUCCESS':
+      case 'DELIVERED':
         statusColor = Colors.green;
         break;
       case 'FAILED':
+      case 'CANCELLED':
         statusColor = Colors.red;
         break;
       default:
@@ -46,17 +49,17 @@ class SummaryDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Order & Tracking ID at the top (plain text as in sketch)
+                  // Order & Tracking ID
                   Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Order ID: ${shipment['order_id']}",
+                        Text("Order ID: ${shipment.id ?? '-'}",
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text("Tracking ID: ${shipment['tracking_id']}",
+                        Text("Tracking ID: ${shipment.orderNumber ?? '-'}",
                             style: const TextStyle(
                                 color: AppColors.textSecondary, fontSize: 14)),
                       ],
@@ -72,21 +75,25 @@ class SummaryDetailScreen extends StatelessWidget {
                         const Icon(Icons.person,
                             color: AppColors.primary, size: 20),
                         const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(shipment['name'],
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
-                            const SizedBox(height: 4),
-                            SizedBox(
-                              width: Get.width * 0.5,
-                              child: Text(shipment['address'],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(shipment.customer?.name ?? 'Customer',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1),
+                              const SizedBox(height: 4),
+                              Text(_buildAddressString(shipment),
                                   style: const TextStyle(
                                       color: AppColors.textSecondary,
-                                      fontSize: 13)),
-                            ),
-                          ],
+                                      fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2),
+                            ],
+                          ),
                         ),
                         const Spacer(),
                         _IconButton(
@@ -112,14 +119,14 @@ class SummaryDetailScreen extends StatelessWidget {
                             color: AppColors.textSecondary,
                             fontSize: 12)),
                     const SizedBox(height: 10),
-                    ...(shipment['items'] as List).map((item) => Padding(
+                    ...(shipment.items ?? []).map((item) => Padding(
                           padding: const EdgeInsets.only(bottom: 5),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(item['name'],
+                              Text(item.productName ?? 'Product',
                                   style: const TextStyle(fontSize: 14)),
-                              Text("x${item['qty']}",
+                              Text("x${item.quantity ?? 1}",
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold)),
                             ],
@@ -131,7 +138,7 @@ class SummaryDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // Large Pill-Shaped Status Indicator as in Sketch (Static)
+          // Status Indicator
           Padding(
             padding: const EdgeInsets.all(24),
             child: Container(
@@ -181,21 +188,18 @@ class SummaryDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
-          Text(value,
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: color ?? Colors.black)),
-        ],
-      ),
-    );
+  String _buildAddressString(OrderModel shipment) {
+    final addr = shipment.deliveryAddress;
+    if (addr == null) return 'Address not available';
+    final parts = [
+      addr.addressLine1,
+      addr.addressLine2,
+      addr.area?.name,
+      addr.city?.name,
+      addr.state?.name,
+      addr.pincode,
+    ].where((e) => e != null && e.toString().isNotEmpty).toList();
+    return parts.join(', ');
   }
 }
 

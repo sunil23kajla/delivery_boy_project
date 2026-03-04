@@ -22,7 +22,7 @@ class ProfileRepository {
     final response = await apiClient.postMultipart(
       AppConstants.profilePictureEndpoint,
       fields: {},
-      files: {'profile_photo': image},
+      files: [MapEntry('profile_photo', image)],
       token: token,
     );
 

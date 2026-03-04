@@ -1,7 +1,8 @@
+import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../fm_flow_controller.dart';
-import 'package:delivery_boy/core/constants/app_colors.dart';
 
 class FmImagesView extends GetView<FmFlowController> {
   const FmImagesView({super.key});
@@ -98,8 +99,9 @@ class FmImagesView extends GetView<FmFlowController> {
           const SizedBox(width: 15),
           Expanded(
             child: Obx(() => ElevatedButton(
-                  onPressed: controller.evidenceImages[0] != null &&
-                          controller.evidenceImages[1] != null
+                  onPressed: (controller.evidenceImages[0] != null &&
+                          controller.evidenceImages[1] != null &&
+                          !controller.isLoading)
                       ? controller.nextStep
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -108,9 +110,16 @@ class FmImagesView extends GetView<FmFlowController> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text("NEXT",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: controller.isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text("COMPLETE",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                 )),
           ),
         ],

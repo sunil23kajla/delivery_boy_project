@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'auth_controller.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
-import '../../widgets/custom_button.dart';
+import 'package:delivery_boy/presentation/screens/auth/auth_controller.dart';
+import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'package:delivery_boy/core/constants/app_strings.dart';
+import 'package:delivery_boy/presentation/widgets/custom_button.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -91,14 +91,14 @@ class LoginScreen extends StatelessWidget {
                       controller: controller.mobileController,
                       keyboardType: TextInputType.phone,
                       maxLength: 10,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         counterText: "",
                         hintText: "Enter Mobile Number",
-                        prefixIcon: const Icon(Icons.phone_android_outlined,
+                        prefixIcon: Icon(Icons.phone_android_outlined,
                             color: AppColors.primary),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 15),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                       ),
                     ),
                   ),

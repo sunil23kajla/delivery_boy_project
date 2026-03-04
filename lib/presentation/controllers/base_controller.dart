@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/error/failure.dart';
 
 class BaseController extends GetxController {
   final _isLoading = false.obs;
@@ -11,15 +12,24 @@ class BaseController extends GetxController {
 
   void handleError(dynamic error) {
     hideLoading();
-    String message = "Something went wrong";
-    if (error is String) {
+    String message;
+    if (error is AppException) {
+      message = error.message;
+    } else if (error is String) {
       message = error;
     } else {
       message = error.toString();
     }
-    Get.snackbar('Error', message,
+    debugPrint('❌ [ERROR] $message');
+    if (Get.context != null) {
+      Get.snackbar(
+        'Error',
+        message,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.error.withOpacity(0.8),
-        colorText: Colors.white);
+        backgroundColor: AppColors.error.withOpacity(0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 }

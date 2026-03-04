@@ -42,6 +42,7 @@ class DeliveryImageView extends GetView<DeliveryFlowController> {
               // ── Required slots: Front + Back ─────────────────────────
               const _SectionLabel(text: 'Required Photos', color: Colors.red),
               const SizedBox(height: 10),
+              // ── Slots logic ──────────────────────────────────────────
               Obx(() => Row(
                     children: [
                       _ImageSlot(
@@ -51,6 +52,7 @@ class DeliveryImageView extends GetView<DeliveryFlowController> {
                             ? controller.images[0]
                             : null,
                         isRequired: true,
+                        onTap: () => controller.pickImage(0),
                       ),
                       const SizedBox(width: 12),
                       _ImageSlot(
@@ -60,6 +62,14 @@ class DeliveryImageView extends GetView<DeliveryFlowController> {
                             ? controller.images[1]
                             : null,
                         isRequired: true,
+                        onTap: () {
+                          if (controller.images.isEmpty) {
+                            Get.snackbar(
+                                "Error", "Please add Front photo first");
+                          } else {
+                            controller.pickImage(1);
+                          }
+                        },
                       ),
                     ],
                   )),
@@ -78,6 +88,14 @@ class DeliveryImageView extends GetView<DeliveryFlowController> {
                             ? controller.images[2]
                             : null,
                         isRequired: false,
+                        onTap: () {
+                          if (controller.images.length < 2) {
+                            Get.snackbar(
+                                "Error", "Please add required photos first");
+                          } else {
+                            controller.pickImage(2);
+                          }
+                        },
                       ),
                       const Expanded(child: SizedBox()),
                     ],
@@ -135,30 +153,15 @@ class DeliveryImageView extends GetView<DeliveryFlowController> {
 
               const SizedBox(height: 14),
 
-              // ── Add Photo button ────────────────────────────────────
-              Obx(() => controller.images.length < 3
-                  ? Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton.icon(
-                        onPressed: controller.pickImage,
-                        icon: const Icon(Icons.add_a_photo, size: 18),
-                        label: Text(AppStrings.add),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink()),
+              // Button removed as per user request
+              const SizedBox.shrink(),
 
               const Spacer(),
               const SizedBox(height: 40),
               Obx(() => CustomButton(
                     text: AppStrings.delivered,
                     isEnabled: controller.isImageStepValid,
+                    isLoading: controller.isLoading,
                     onPressed: controller.finishDelivery,
                     color: Colors.green,
                   )),
@@ -208,12 +211,14 @@ class _ImageSlot extends StatelessWidget {
   final IconData icon;
   final dynamic file;
   final bool isRequired;
+  final VoidCallback onTap;
 
   const _ImageSlot({
     required this.label,
     required this.icon,
     required this.file,
     required this.isRequired,
+    required this.onTap,
   });
 
   @override
@@ -222,76 +227,82 @@ class _ImageSlot extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
     final slotSize = (width - width * 0.14 - 12) / 2;
 
-    return SizedBox(
-      width: slotSize,
-      height: slotSize,
-      child: Container(
-        decoration: BoxDecoration(
-          color: hasImage ? null : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: hasImage
-                ? Colors.green.shade400
-                : isRequired
-                    ? Colors.orange.shade300
-                    : Colors.blue.shade200,
-            width: hasImage ? 2 : 1.5,
-            style:
-                isRequired && !hasImage ? BorderStyle.solid : BorderStyle.solid,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: slotSize,
+        height: slotSize,
+        child: Container(
+          decoration: BoxDecoration(
+            color: hasImage ? null : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasImage
+                  ? Colors.green.shade400
+                  : isRequired
+                      ? Colors.orange.shade300
+                      : Colors.blue.shade200,
+              width: hasImage ? 2 : 1.5,
+              style: isRequired && !hasImage
+                  ? BorderStyle.solid
+                  : BorderStyle.solid,
+            ),
+            image: hasImage
+                ? DecorationImage(
+                    image: FileImage(file),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
-          image: hasImage
-              ? DecorationImage(
-                  image: FileImage(file),
-                  fit: BoxFit.cover,
+          child: hasImage
+              ? Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    margin: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child:
+                        const Icon(Icons.check, color: Colors.white, size: 14),
+                  ),
                 )
-              : null,
-        ),
-        child: hasImage
-            ? Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  margin: const EdgeInsets.all(6),
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 14),
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: Colors.grey.shade400, size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (isRequired)
+                      const Text(
+                        'Required',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      )
+                    else
+                      const Text(
+                        'Optional',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
                 ),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: Colors.grey.shade400, size: 32),
-                  const SizedBox(height: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (isRequired)
-                    const Text(
-                      'Required',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    )
-                  else
-                    const Text(
-                      'Optional',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                ],
-              ),
+        ),
       ),
     );
   }

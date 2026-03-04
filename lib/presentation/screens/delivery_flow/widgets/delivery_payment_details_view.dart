@@ -47,7 +47,7 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                               size: 200, color: AppColors.textPrimary),
                           const SizedBox(height: 10),
                           Text(
-                            "₹ ${controller.shipment['amount'] ?? '79.00'}",
+                            "₹ ${controller.shipment.totalAmount ?? '0.00'}",
                             style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -59,10 +59,7 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                     const SizedBox(height: 30),
                     ElevatedButton.icon(
                       onPressed: () {
-                        // Simulate payment verification
-                        controller.isPaymentVerified.value = true;
-                        Get.snackbar(
-                            "Success", "Payment verified successfully!");
+                        controller.verifyUpiPayment();
                       },
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text("CHECK PAYMENT"),
@@ -104,7 +101,7 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                                   TextStyle(fontSize: 16, color: Colors.grey)),
                           const SizedBox(height: 10),
                           Text(
-                            "₹ ${controller.shipment['amount'] ?? '79.00'}",
+                            "₹ ${controller.shipment.totalAmount ?? '0.00'}",
                             style: const TextStyle(
                                 fontSize: 40,
                                 fontWeight: FontWeight.bold,
