@@ -1,6 +1,7 @@
 import '../../core/network/api_client.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/user_model.dart';
+import '../../core/error/failure.dart';
 
 class AuthRepository {
   final ApiClient apiClient;
@@ -26,7 +27,7 @@ class AuthRepository {
     if (response['success'] == true) {
       return UserModel.fromJson(response['data']);
     } else {
-      throw Exception(response['message'] ?? 'Verification Failed');
+      throw AppException(response['message'] ?? 'Verification Failed');
     }
   }
 

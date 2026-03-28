@@ -41,14 +41,14 @@ class DeliveryOtpView extends GetView<DeliveryFlowController> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Enter the 6-digit verification code sent to the customer.',
+                  'Enter the 4-digit verification code sent to the customer.',
                   style:
                       TextStyle(color: AppColors.textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 50),
                 Center(
                   child: Pinput(
-                    length: 6,
+                    length: 4,
                     controller: controller.otpController,
                     defaultPinTheme: defaultPinTheme,
                     focusedPinTheme: defaultPinTheme.copyWith(

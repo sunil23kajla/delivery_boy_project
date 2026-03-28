@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -8,7 +9,9 @@ import 'package:delivery_boy/core/localization/app_translations.dart';
 import 'package:delivery_boy/presentation/bindings/initial_binding.dart';
 
 void main() async {
+  HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint('--- APP START startup: VERSION SYNC CHECK 2.3.0 ---');
   await GetStorage.init();
   _initConnectivity();
   runApp(const MyApp());
@@ -45,5 +48,14 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
     );
+  }
+}
+
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
   }
 }

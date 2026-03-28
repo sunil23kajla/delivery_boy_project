@@ -33,11 +33,18 @@ class HomeController extends BaseController {
   final rxDeliveredCount = 0.obs;
   final rxPendingCount = 0.obs;
 
+  // Summary State
+  final orderSummaryData = <String, dynamic>{}.obs;
+  final totalCollection = "0.00".obs;
+  final cashValue = "0.00".obs;
+  final onlineValue = "0.00".obs;
+
   @override
   void onInit() {
     super.onInit();
     scrollController.addListener(_scrollListener);
     fetchOrders();
+    fetchSummary();
   }
 
   void _scrollListener() {
@@ -46,6 +53,15 @@ class HomeController extends BaseController {
         !isLoading &&
         !isFetchingMore.value) {
       loadMoreOrders();
+    }
+  }
+
+  void changeTabIndex(int index) {
+    rxIndex.value = index;
+    if (index == 0) {
+      fetchOrders(showLoadingIndicator: false);
+    } else {
+      fetchSummary();
     }
   }
 
@@ -119,6 +135,35 @@ class HomeController extends BaseController {
         shipments
             .assignAll(orderList.map((e) => OrderModel.fromJson(e)).toList());
 
+        // Update dashboard counts from order_type_counts if available
+        if (rawData['order_type_counts'] != null) {
+          final counts = rawData['order_type_counts'];
+          rxTotalCount.value = counts['all'] ?? counts['total'] ?? 0;
+          rxDeliveredCount.value = counts['delivered'] ?? 0;
+          // Calculate pending if not provided, ensuring it's never negative (v1.9.4)
+          final total = rxTotalCount.value;
+          final delivered = rxDeliveredCount.value;
+          rxPendingCount.value =
+              (total - delivered) < 0 ? 0 : (total - delivered);
+        } else {
+          // Robust fallback keys
+          rxTotalCount.value = rawData['total_orders'] ??
+              rawData['total'] ??
+              response['total_orders'] ??
+              response['total'] ??
+              0;
+          rxDeliveredCount.value = rawData['delivered_orders'] ??
+              rawData['delivered'] ??
+              response['delivered_orders'] ??
+              response['delivered'] ??
+              0;
+          rxPendingCount.value = rawData['pending_orders'] ??
+              rawData['pending'] ??
+              response['pending_orders'] ??
+              response['pending'] ??
+              0;
+        }
+
         // Update tab counts only when we fetch 'All' data, so they are preserved
         if (rxSelectedFilter.value == 'All') {
           tabCountAll.value = rxTotalCount.value;
@@ -152,6 +197,25 @@ class HomeController extends BaseController {
     } catch (e) {
       if (showLoadingIndicator) hideLoading();
       handleError(e);
+    }
+  }
+
+  Future<void> fetchSummary() async {
+    try {
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.getOrderSummary(token: token);
+
+      if (response['success'] == true && response['data'] != null) {
+        final data = response['data'];
+        if (data['order_type_wise'] != null) {
+          orderSummaryData.assignAll(data['order_type_wise']);
+        }
+        totalCollection.value = (data['total_collection_amount'] ?? 0).toString();
+        cashValue.value = (data['cash_value'] ?? 0).toString();
+        onlineValue.value = (data['online_value'] ?? 0).toString();
+      }
+    } catch (e) {
+      debugPrint("Error fetching summary: $e");
     }
   }
 
@@ -206,9 +270,6 @@ class HomeController extends BaseController {
     }
   }
 
-  void changeTabIndex(int index) {
-    rxIndex.value = index;
-  }
 
   void selectFilter(String filter) {
     if (rxSelectedFilter.value != filter) {
@@ -284,28 +345,21 @@ class HomeController extends BaseController {
   // --- Summary Flow Methods ---
 
   int getSummaryCount(String category, String status) {
-    return shipments.where((s) {
-      final matchesCategory =
-          (category == "ALL") || (resolveCategory(s) == category);
-      final currentStatus = (s.orderStatus ?? '').toUpperCase();
+    if (orderSummaryData.isEmpty) return 0;
 
-      bool matchesStatus = false;
-      if (status == "DISPATCH") {
-        matchesStatus = currentStatus == "DISPATCH" ||
-            currentStatus == "SHIPPED" ||
-            currentStatus == "OUT_FOR_DELIVERY" ||
-            currentStatus == "ASSIGNED" ||
-            currentStatus == "READY_FOR_PICKUP";
-      } else if (status == "SUCCESS") {
-        matchesStatus = currentStatus == "DELIVERED";
-      } else if (status == "FAILED") {
-        matchesStatus = currentStatus == "CANCELLED" ||
-            currentStatus == "UNDELIVERED" ||
-            currentStatus == "RETURNED";
-      }
+    final catData = orderSummaryData[category.toLowerCase()];
+    if (catData == null) return 0;
 
-      return matchesCategory && matchesStatus;
-    }).length;
+    switch (status.toUpperCase()) {
+      case "DISPATCH":
+        return catData['dispatch'] ?? 0;
+      case "SUCCESS":
+        return catData['success'] ?? 0;
+      case "FAILED":
+        return catData['failed'] ?? 0;
+      default:
+        return 0;
+    }
   }
 
   List<OrderModel> getSummaryList(String category, String status) {

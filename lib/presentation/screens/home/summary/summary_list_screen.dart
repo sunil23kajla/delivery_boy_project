@@ -2,54 +2,90 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:delivery_boy/core/constants/app_routes.dart';
-import 'package:delivery_boy/presentation/screens/home/home_controller.dart';
 import 'package:delivery_boy/presentation/screens/home/widgets/shipment_card.dart';
 
-class SummaryListScreen extends StatelessWidget {
+import './summary_list_controller.dart';
+
+class SummaryListScreen extends GetView<SummaryListController> {
   const SummaryListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<HomeController>();
-    final args = Get.arguments as Map<String, dynamic>;
-    final category = args['category'] as String;
-    final status = args['status'] as String;
-
-    final list = controller.getSummaryList(category, status);
-
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8F9FE),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios,
               color: AppColors.textPrimary, size: 20),
           onPressed: () => Get.back(),
         ),
-        title: Text(
-          "$category - $status",
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
+        title: Obx(() => Text(
+              "${controller.category} - ${controller.status}",
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            )),
       ),
-      body: list.isEmpty
-          ? const Center(child: Text("No shipments found"))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              itemBuilder: (context, index) {
-                return GestureDetector(
+      body: Obx(() {
+        if (controller.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (controller.shipments.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text("No shipments found", 
+                  style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            )
+          );
+        }
+
+        return ListView.builder(
+          controller: controller.scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          itemCount: controller.shipments.length +
+              (controller.isFetchingMore.value ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < controller.shipments.length) {
+              final shipment = controller.shipments[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
                   onTap: () => Get.toNamed(AppRoutes.summaryDetail,
-                      arguments: list[index]),
-                  child:
-                      ShipmentCard(shipment: list[index], navigateOnTap: false),
-                );
-              },
-            ),
+                      arguments: {
+                        'shipment': shipment,
+                        'isQuick': controller.isQuick,
+                      }),
+                  child: ShipmentCard(
+                    shipment: shipment, 
+                    navigateOnTap: false,
+                    forcedStatus: controller.status,
+                    forcedColor: controller.status == "SUCCESS" ? Colors.green : (controller.status == "FAILED" ? Colors.red : AppColors.primary),
+                    showActions: false,
+                    isQuick: controller.isQuick,
+                  ),
+                ),
+              );
+            } else {
+              return const Center(
+                  child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ));
+            }
+          },
+        );
+      }),
     );
   }
 }

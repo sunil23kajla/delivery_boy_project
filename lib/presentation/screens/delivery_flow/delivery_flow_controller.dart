@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:delivery_boy/core/constants/app_routes.dart';
 import 'package:delivery_boy/core/constants/app_strings.dart';
@@ -29,6 +30,7 @@ class DeliveryFlowController extends BaseController {
 
   late OrderModel shipment;
   var currentStep = DeliveryStep.scan.obs;
+  Timer? _paymentTimer;
 
   // Scan Step
   var scannedBarcode = "".obs;
@@ -59,7 +61,7 @@ class DeliveryFlowController extends BaseController {
   final otpController = TextEditingController();
   var otpText = "".obs;
   var isOtpVerified = false.obs;
-  bool get isOtpStepValid => otpText.value.length == 6;
+  bool get isOtpStepValid => otpText.value.length == 4;
 
   // Options Step
   var selectedRecipient = "".obs; // 'customer', 'other'
@@ -100,6 +102,8 @@ class DeliveryFlowController extends BaseController {
   // Payment Step
   var selectedPaymentMethod = "".obs; // 'upi', 'cash'
   var isPaymentVerified = false.obs; // For UPI flow
+  var qrCodeUrl = "".obs;
+  var isQrGenerated = false.obs;
   bool get isPaymentStepValid => selectedPaymentMethod.isNotEmpty;
 
   // Image Step
@@ -113,17 +117,18 @@ class DeliveryFlowController extends BaseController {
     if (currentStep.value == DeliveryStep.scan) {
       if (isScanDone.value) {
         if (scannedBarcode.value == "SKIPPED") {
-          currentStep.value = DeliveryStep.options;
+          if (isCod) {
+            currentStep.value = DeliveryStep.options;
+          } else {
+            currentStep.value = DeliveryStep.otp;
+          }
         } else {
           verifyQrCode();
         }
       }
     } else if (currentStep.value == DeliveryStep.otp) {
       if (isOtpStepValid) {
-        isOtpVerified.value = true;
-        Future.delayed(const Duration(seconds: 1), () {
-          currentStep.value = DeliveryStep.options;
-        });
+        verifyQrOtp();
       }
     } else if (currentStep.value == DeliveryStep.options) {
       if (isOptionsStepValid) {
@@ -139,18 +144,21 @@ class DeliveryFlowController extends BaseController {
       }
     } else if (currentStep.value == DeliveryStep.recipientDetails) {
       if (isRecipientDetailsStepValid) {
-        if (isCod) {
-          currentStep.value = DeliveryStep.payment;
-        } else {
-          currentStep.value = DeliveryStep.images;
-        }
+        _submitDetails();
       }
     } else if (currentStep.value == DeliveryStep.payment) {
       if (isPaymentStepValid) {
         if (selectedPaymentMethod.value == 'upi') {
-          fetchPaymentDetails();
+          currentStep.value = DeliveryStep.paymentDetails;
+          // Check if already paid first
+          fetchPaymentDetails().then((_) {
+            if (!isPaymentVerified.value) {
+              generatePaymentQr();
+            }
+          });
+        } else {
+          currentStep.value = DeliveryStep.paymentDetails;
         }
-        currentStep.value = DeliveryStep.paymentDetails;
       }
     } else if (currentStep.value == DeliveryStep.paymentDetails) {
       if (selectedPaymentMethod.value == 'cash') {
@@ -168,7 +176,7 @@ class DeliveryFlowController extends BaseController {
     } else if (currentStep.value == DeliveryStep.otp) {
       currentStep.value = DeliveryStep.scan;
     } else if (currentStep.value == DeliveryStep.options) {
-      if (scannedBarcode.value == "SKIPPED") {
+      if (isCod) {
         currentStep.value = DeliveryStep.scan;
       } else {
         currentStep.value = DeliveryStep.otp;
@@ -192,6 +200,40 @@ class DeliveryFlowController extends BaseController {
 
   var paymentDetails = RxMap<String, dynamic>();
 
+  Future<void> _submitDetails() async {
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) return;
+
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.deliverOrder(
+        id: orderId,
+        recipientName: recipientNameController.text,
+        recipientMobile: recipientPhoneController.text,
+        notes: otherAddressController.text,
+        orderType: 'fwd',
+        token: token,
+      );
+
+      if (response['success'] == true) {
+        hideLoading();
+        if (isCod) {
+          currentStep.value = DeliveryStep.payment;
+        } else {
+          currentStep.value = DeliveryStep.images;
+        }
+      } else {
+        hideLoading();
+        handleError(
+            response['message']?.toString() ?? "Failed to save details");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
+  }
+
   Future<void> verifyQrCode() async {
     try {
       final orderId = shipment.id?.toString();
@@ -201,19 +243,20 @@ class DeliveryFlowController extends BaseController {
       final token = _sessionService.token ?? "";
       final response = await _shipmentRepository.verifyFwdQr(
         orderId: orderId,
-        qrToken: scannedBarcode.value,
+        qrToken: parseQrToken(scannedBarcode.value),
         token: token,
       );
 
       if (response['success'] == true) {
         hideLoading();
-        currentStep.value = DeliveryStep.otp;
+        if (isCod) {
+          currentStep.value = DeliveryStep.options;
+        } else {
+          currentStep.value = DeliveryStep.otp;
+        }
       } else {
         hideLoading();
-        Get.snackbar(
-            "Error", response['message']?.toString() ?? "Failed to verify QR",
-            backgroundColor: Colors.red.shade100,
-            colorText: Colors.red.shade900);
+        handleError(response['message']?.toString() ?? "Failed to verify QR");
       }
     } catch (e) {
       hideLoading();
@@ -232,12 +275,43 @@ class DeliveryFlowController extends BaseController {
     }
   }
 
-  Future<void> fetchPaymentDetails() async {
+  Future<void> verifyQrOtp() async {
     try {
       final orderId = shipment.id?.toString();
       if (orderId == null) return;
 
       showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.verifyFwdQrOtp(
+        orderId: orderId,
+        mobile: shipment.customer?.mobile ?? "",
+        otp: otpController.text,
+        token: token,
+      );
+
+      hideLoading();
+      if (response['success'] == true) {
+        isOtpVerified.value = true;
+        Get.snackbar(
+            "Success", response['message'] ?? "OTP Verified Successfully");
+        Future.delayed(const Duration(seconds: 1), () {
+          currentStep.value = DeliveryStep.options;
+        });
+      } else {
+        handleError(response['message'] ?? "OTP Verification Failed");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
+  }
+
+  Future<void> fetchPaymentDetails({bool isAuto = false}) async {
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) return;
+
+      if (!isAuto) showLoading();
       final token = _sessionService.token ?? "";
       final response = await _shipmentRepository.receiveFwdPayment(
         orderId: orderId,
@@ -245,79 +319,120 @@ class DeliveryFlowController extends BaseController {
         token: token,
       );
 
+      debugPrint('--- PAYMENT RESPONSE LOG ---');
+      debugPrint('Keys: ${response.keys.toList()}');
+      if (response['data'] != null) {
+        debugPrint('Data Keys: ${response['data']?.keys?.toList()}');
+        if (response['data']['payment'] != null) {
+          debugPrint(
+              'Payment Keys: ${response['data']['payment']?.keys?.toList()}');
+        }
+      }
+
       if (response['success'] == true && response['data'] != null) {
         paymentDetails.assignAll(Map<String, dynamic>.from(response['data']));
+
+        // Check if already paid
+        if (paymentDetails['payment_status']?.toString().toLowerCase() ==
+                'success' ||
+            paymentDetails['payment_status']?.toString().toLowerCase() ==
+                'paid') {
+          isPaymentVerified.value = true;
+          stopPaymentPolling();
+        } else if (selectedPaymentMethod.value == 'upi') {
+          startPaymentPolling();
+        }
       } else if (response['success'] == false) {
-        Get.snackbar(
-            "Error",
-            response['message']?.toString() ??
-                "Failed to receive payment details",
-            backgroundColor: Colors.red.shade100,
-            colorText: Colors.red.shade900);
+        if (!isAuto) {
+          handleError(response['message']?.toString() ??
+              "Failed to receive payment details");
+        }
       }
-      hideLoading();
+      if (!isAuto) hideLoading();
     } catch (e) {
-      hideLoading();
-      Get.snackbar(
-        AppStrings.error,
-        e
-            .toString()
-            .replaceAll('Exception: ', '')
-            .replaceAll('ClientException: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade900,
-        duration: const Duration(seconds: 4),
-      );
-      handleError(e);
+      if (!isAuto) {
+        hideLoading();
+        handleError(e);
+      }
     }
   }
 
-  Future<void> verifyUpiPayment() async {
+  Future<void> verifyUpiPayment({bool isAuto = false}) async {
+    try {
+      final orderId = shipment.id?.toString();
+      if (orderId == null) return;
+
+      if (!isAuto) showLoading();
+      final token = _sessionService.token ?? "";
+
+      final response = await _shipmentRepository.getOrderDetails(orderId, token);
+
+      if (response['success'] == true && response['data'] != null) {
+        final status = response['data']['payment_status']?.toString().toLowerCase();
+        if (status == 'success' || status == 'paid') {
+          isPaymentVerified.value = true;
+          stopPaymentPolling();
+          if (!isAuto) Get.snackbar("Success", "Payment verified successfully!");
+        } else {
+          if (!isAuto) {
+            handleError("Payment not yet received. Please check again.");
+          }
+        }
+      } else {
+        if (!isAuto) {
+          handleError(response['message']?.toString() ?? "Payment verification failed");
+        }
+      }
+      if (!isAuto) hideLoading();
+    } catch (e) {
+      if (!isAuto) {
+        hideLoading();
+        handleError(e);
+      }
+    }
+  }
+
+  Future<void> generatePaymentQr() async {
     try {
       final orderId = shipment.id?.toString();
       if (orderId == null) return;
 
       showLoading();
       final token = _sessionService.token ?? "";
-
-      final razorpayOrderId = paymentDetails['payment'] != null
-          ? paymentDetails['payment']['razorpay_order_id']?.toString()
-          : paymentDetails['razorpay_order_id']?.toString();
-
-      final response = await _shipmentRepository.verifyFwdPayment(
+      final response = await _shipmentRepository.generatePaymentQr(
         orderId: orderId,
-        razorpayOrderId: razorpayOrderId ?? "",
-        razorpayPaymentId: "pay_placeholder", // This should come from SDK
-        razorpaySignature: "sig_placeholder", // This should come from SDK
         token: token,
       );
 
-      if (response['success'] == true) {
-        isPaymentVerified.value = true;
-        Get.snackbar("Success", "Payment verified successfully!");
-      } else if (response['success'] == false) {
-        Get.snackbar("Error",
-            response['message']?.toString() ?? "Payment verification failed",
-            backgroundColor: Colors.red.shade100,
-            colorText: Colors.red.shade900);
-      }
       hideLoading();
+      if (response['success'] == true && response['data'] != null) {
+        qrCodeUrl.value =
+            response['data']['qr_url'] ?? response['data']['qr_code'] ?? "";
+        isQrGenerated.value = true;
+        startPaymentPolling();
+      } else {
+        handleError(response['message'] ?? "Failed to generate QR");
+      }
     } catch (e) {
       hideLoading();
-      Get.snackbar(
-        AppStrings.error,
-        e
-            .toString()
-            .replaceAll('Exception: ', '')
-            .replaceAll('ClientException: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade900,
-        duration: const Duration(seconds: 4),
-      );
       handleError(e);
     }
+  }
+
+  void startPaymentPolling() {
+    stopPaymentPolling(); // Ensure no duplicate timers
+    _paymentTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!isPaymentVerified.value) {
+        fetchPaymentDetails(isAuto: true);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void stopPaymentPolling() {
+    _paymentTimer?.cancel();
+    _paymentTimer = null;
   }
 
   Future<void> finishDelivery() async {
@@ -339,11 +454,8 @@ class DeliveryFlowController extends BaseController {
       showLoading();
       final token = _sessionService.token ?? "";
 
-      final response = await _shipmentRepository.completeFwdDelivery(
-        orderId: orderId,
-        recipientName: recipientNameController.text,
-        recipientMobile: recipientPhoneController.text,
-        notes: otherAddressController.text,
+      final response = await _shipmentRepository.uploadDeliveryProof(
+        id: orderId,
         photos: images.toList(),
         token: token,
       );
@@ -443,6 +555,7 @@ class DeliveryFlowController extends BaseController {
 
   @override
   void onClose() {
+    stopPaymentPolling();
     otpController.dispose();
     scanController.dispose();
     recipientNameController.dispose();

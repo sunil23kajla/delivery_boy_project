@@ -14,6 +14,7 @@ class SessionService extends GetxService {
   UserModel? get user => _user.value;
 
   bool get isLoggedIn => _token.value != null;
+  bool get isQuickFlow => _user.value?.isQuickFlow ?? false;
 
   @override
   void onInit() {

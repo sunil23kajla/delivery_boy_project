@@ -14,7 +14,8 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(width * 0.07),
+            padding:
+                EdgeInsets.symmetric(horizontal: width * 0.04, vertical: 10),
             child: Obx(() {
               final isUpi = controller.selectedPaymentMethod.value == 'upi';
               return Column(
@@ -24,10 +25,12 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                     // UPI Flow (Wireframe Step 9 - Left)
                     const Text(
                       'SCAN QR TO PAY',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 15),
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -41,45 +44,88 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                               offset: const Offset(0, 5))
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.qr_code_2,
-                              size: 200, color: AppColors.textPrimary),
-                          const SizedBox(height: 10),
-                          Text(
-                            "₹ ${controller.shipment.totalAmount ?? '0.00'}",
-                            style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary),
-                          ),
-                        ],
-                      ),
+                      child: Obx(() {
+                        final String? qrUrl = controller.qrCodeUrl.value.isNotEmpty 
+                            ? controller.qrCodeUrl.value 
+                            : null;
+
+                        return Column(
+                          children: [
+                            if (qrUrl != null && qrUrl.isNotEmpty)
+                              Image.network(
+                                qrUrl,
+                                width: 160,
+                                height: 160,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.error_outline,
+                                        size: 100, color: Colors.red),
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const SizedBox(
+                                    width: 160,
+                                    height: 160,
+                                    child: Center(
+                                        child: CircularProgressIndicator()),
+                                  );
+                                },
+                              )
+                            else if (controller.isLoading)
+                              const SizedBox(
+                                width: 160,
+                                height: 160,
+                                child: Center(
+                                    child: CircularProgressIndicator()),
+                              )
+                            else
+                              const Icon(Icons.qr_code_2,
+                                  size: 160, color: AppColors.textPrimary),
+                            const SizedBox(height: 10),
+                            Text(
+                              "₹ ${controller.shipment.totalAmount ?? '0.00'}",
+                              style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary),
+                            ),
+                          ],
+                        );
+                      }),
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        controller.verifyUpiPayment();
-                      },
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text("CHECK PAYMENT"),
+                      onPressed: controller.isPaymentVerified.value
+                          ? null
+                          : () => controller.verifyUpiPayment(),
+                      icon: Icon(controller.isPaymentVerified.value
+                          ? Icons.check_circle
+                          : Icons.check_circle_outline),
+                      label: Text(controller.isPaymentVerified.value
+                          ? "PAYMENT SUCCESSFUL"
+                          : "CHECK PAYMENT"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
+                        backgroundColor: controller.isPaymentVerified.value
+                            ? Colors.green
+                            : Colors.blue.shade700,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 12),
+                            horizontal: 20, vertical: 8),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30)),
+                        disabledBackgroundColor: Colors.green,
+                        disabledForegroundColor: Colors.white,
                       ),
                     ),
                   ] else ...[
                     // Cash Flow (Wireframe Step 9 - Right)
                     const Text(
                       'COLLECT CASH',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black),
                     ),
-                    const SizedBox(height: 50),
+                    const SizedBox(height: 20),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(30),
@@ -97,14 +143,16 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                       child: Column(
                         children: [
                           const Text("Amount to Collect",
-                              style:
-                                  TextStyle(fontSize: 16, color: Colors.grey)),
-                          const SizedBox(height: 10),
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 5),
                           Text(
                             "₹ ${controller.shipment.totalAmount ?? '0.00'}",
                             style: const TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
                                 color: AppColors.primary),
                           ),
                         ],
@@ -117,7 +165,10 @@ class DeliveryPaymentDetailsView extends GetView<DeliveryFlowController> {
                         Icon(Icons.info_outline,
                             color: Colors.orange, size: 20),
                         SizedBox(width: 10),
-                        Text("Please recount the cash carefully"),
+                        Text("Please recount the cash carefully",
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],

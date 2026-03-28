@@ -33,19 +33,22 @@ class RvpCancelView extends GetView<RvpFlowController> {
                   ],
                 );
               } else {
+                final reason = controller.selectedReason.value;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "REASON: ${controller.selectedCancelReason.value.toString().split('.').last.replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}').toUpperCase()}",
+                      "REASON: ${reason?['reason']?.toString().toUpperCase() ?? ''}",
                       style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary),
                     ),
                     const SizedBox(height: 30),
-                    if (controller.selectedCancelReason.value ==
-                        RvpCancelReason.cancelledByCustomer)
+                    if (reason?['id'] == 1 ||
+                        reason?['id'] == "1" ||
+                        reason?['requires_otp'] == true ||
+                        reason?['requires_otp'] == 1)
                       _buildOtpSection(width)
                     else
                       _buildDetailSection(),
@@ -61,41 +64,39 @@ class RvpCancelView extends GetView<RvpFlowController> {
   }
 
   Widget _buildReasonList() {
-    return Container(
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200)),
-      child: Column(
-        children: [
-          _buildReasonTile("PICKUP CANCELLED BY CUSTOMER",
-              RvpCancelReason.cancelledByCustomer),
-          _buildReasonTile("PICKUP RESCHEDULED BY CUSTOMER",
-              RvpCancelReason.rescheduledByCustomer),
-          _buildReasonTile(
-              "CUSTOMER UNAVAILABLE", RvpCancelReason.customerUnavailable),
-          _buildReasonTile(
-              "INCOMPLETE NUM./ADD.", RvpCancelReason.incompleteAddress),
-          _buildReasonTile(
-              "CUSTOMER REFUSED TO GIVE OTP", RvpCancelReason.refusedOtp),
-          _buildReasonTile("FAKE PRODUCT", RvpCancelReason.fakeProduct),
-          _buildReasonTile("MISROUTE", RvpCancelReason.misroute),
-        ],
-      ),
-    );
-  }
+    return Obx(() {
+      if (controller.cancelReasons.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      return Container(
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200)),
+        child: Column(
+          children: controller.cancelReasons.map((reason) {
+            final label = reason['reason']?.toString() ?? "Unknown";
+            final id = reason['id'];
 
-  Widget _buildReasonTile(String label, RvpCancelReason reason) {
-    return Obx(() => RadioListTile<RvpCancelReason>(
-          title: Text(label,
-              style:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          value: reason,
-          groupValue: controller.selectedCancelReason.value,
-          onChanged: (val) => controller.selectedCancelReason.value = val,
-          activeColor: AppColors.primary,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-        ));
+            return RadioListTile<dynamic>(
+              title: Text(label,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+              value: id,
+              groupValue: controller.selectedReason.value?['id'],
+              onChanged: (val) => controller.selectedReason.value = reason,
+              activeColor: AppColors.primary,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+            );
+          }).toList(),
+        ),
+      );
+    });
   }
 
   Widget _buildOtpSection(double width) {
@@ -108,7 +109,7 @@ class RvpCancelView extends GetView<RvpFlowController> {
         const SizedBox(height: 15),
         Center(
           child: Pinput(
-            length: 6,
+            length: 4,
             controller: controller.cancelOtpController,
             enabled: !controller.isCancelOtpVerified.value,
             defaultPinTheme: PinTheme(
@@ -123,34 +124,6 @@ class RvpCancelView extends GetView<RvpFlowController> {
           ),
         ),
         const SizedBox(height: 25),
-        Obx(() => Center(
-              child: controller.isCancelOtpVerified.value
-                  ? const Column(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 40),
-                        SizedBox(height: 5),
-                        Text("Verified",
-                            style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    )
-                  : SizedBox(
-                      width: 150,
-                      child: ElevatedButton(
-                        onPressed: controller.cancelOtpText.value.length == 6
-                            ? controller.verifyCancelOtp
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text("VERIFY",
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-            )),
       ],
     );
   }
@@ -159,7 +132,7 @@ class RvpCancelView extends GetView<RvpFlowController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("REASON DETAILS",
+        const Text("REASON DETAILS (OPTIONAL)",
             style: TextStyle(
                 fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
         const SizedBox(height: 10),
@@ -210,21 +183,20 @@ class RvpCancelView extends GetView<RvpFlowController> {
             child: Obx(() {
               final isReasonsStep =
                   controller.currentCancelStep.value == RvpCancelStep.reasons;
-              final hasSelectedReason =
-                  controller.selectedCancelReason.value != null;
+              final hasSelectedReason = controller.selectedReason.value != null;
 
               return ElevatedButton(
                 onPressed: hasSelectedReason ? controller.nextStep : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      isReasonsStep ? AppColors.primary : Colors.orange,
+                      isReasonsStep ? AppColors.primary : Colors.red,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                   disabledBackgroundColor: Colors.grey.shade300,
                 ),
                 child: Text(
-                  isReasonsStep ? "NEXT" : "MARK PENDING",
+                  isReasonsStep ? "NEXT" : "CANCEL ORDER",
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),

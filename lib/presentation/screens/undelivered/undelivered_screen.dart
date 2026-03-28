@@ -4,7 +4,6 @@ import 'package:pinput/pinput.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../widgets/custom_button.dart';
 import 'undelivered_controller.dart';
 
 class UndeliveredScreen extends StatelessWidget {
@@ -155,9 +154,9 @@ class UndeliveredScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Pinput(
-                    length: 6,
+                    length: 4,
                     controller: controller.otpController,
-                    enabled: !controller.isOtpVerified.value,
+                    enabled: !controller.isLoading,
                     defaultPinTheme: PinTheme(
                       width: 45,
                       height: 50,
@@ -168,13 +167,6 @@ class UndeliveredScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  CustomButton(
-                    text: "VERIFY OTP",
-                    onPressed: controller.verifyOtp,
-                    isEnabled: !controller.isOtpVerified.value,
-                    color: AppColors.primary,
                   ),
                 ],
               ),
@@ -263,20 +255,32 @@ class UndeliveredScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              onPressed: () {
-                if (controller.currentStep.value == UndeliveredStep.reasons) {
-                  controller.nextStep();
-                } else {
-                  controller.completeProcess();
-                }
-              },
-              child: Text(
-                controller.currentStep.value == UndeliveredStep.reasons
-                    ? "NEXT"
-                    : "MARK UNDELIVERED",
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-              ),
+              onPressed: controller.isLoading
+                  ? null
+                  : () {
+                      if (controller.currentStep.value ==
+                          UndeliveredStep.reasons) {
+                        controller.nextStep();
+                      } else {
+                        controller.completeProcess();
+                      }
+                    },
+              child: controller.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      controller.currentStep.value == UndeliveredStep.reasons
+                          ? "NEXT"
+                          : "MARK UNDELIVERED",
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
             ),
           ),
         ],

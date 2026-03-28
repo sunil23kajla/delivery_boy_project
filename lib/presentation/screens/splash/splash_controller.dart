@@ -14,7 +14,11 @@ class SplashController extends GetxController {
   void _handleNavigation() async {
     await Future.delayed(const Duration(seconds: 3));
     if (_sessionService.isLoggedIn) {
-      Get.offAllNamed(AppRoutes.home);
+      if (_sessionService.isQuickFlow) {
+        Get.offAllNamed(AppRoutes.quickHome);
+      } else {
+        Get.offAllNamed(AppRoutes.home);
+      }
     } else {
       Get.offAllNamed(AppRoutes.login);
     }

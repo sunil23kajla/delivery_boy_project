@@ -1,0 +1,437 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:delivery_boy/core/constants/app_routes.dart';
+import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'package:delivery_boy/presentation/controllers/base_controller.dart';
+
+enum QuickStep {
+  home,
+  details,
+  pickupVerification,
+  pickupImages,
+  fvdOverview,
+  fvdQuestions,
+  fvdOtp,
+  markPendingReason,
+  markPendingOtp,
+  markPendingComment,
+  markPendingRTDetails,
+  markPendingRTOtp,
+  markPendingRTImages,
+  success
+}
+
+class QuickFlowController extends BaseController {
+  var currentStep = QuickStep.home.obs;
+  var orders = <Map<String, dynamic>>[].obs;
+  var selectedOrder = Rxn<Map<String, dynamic>>();
+
+  // Pickup Verification State
+  final Rx<bool?> isProductVisible = Rx<bool?>(null);
+  final Rx<bool?> isWeightMatched = Rx<bool?>(null);
+
+  // Pickup State
+  var pickupImages = <File?>[null, null].obs; // Front, Back
+
+  // FVD Flow State (Unified Delivery)
+  var fmQuestions =
+      <bool?>[null, null, null].obs; // null: none, true: Yes, false: No
+  var fvdOtpController = TextEditingController();
+  var fvdOtpText = "".obs;
+
+  // Mark Pending State (Disabled for now)
+  var selectedPendingReasonMap = Rxn<Map<String, dynamic>>();
+  var selectedPendingReasonId = "".obs;
+  var pendingReasons = <Map<String, dynamic>>[].obs;
+  var pendingOtpController = TextEditingController();
+  var pendingOtpText = "".obs; // For RT-style OTP verification
+  var pendingCommentController = TextEditingController();
+  var pendingRTImages = <File?>[null, null, null].obs; // Front, Back, Customer
+
+  final ImagePicker _picker = ImagePicker();
+  var isPickerActive = false.obs;
+  bool _isDisposed = false;
+
+  void resetState() {
+    currentStep.value = QuickStep.home;
+    isProductVisible.value = null;
+    isWeightMatched.value = null;
+    pickupImages.assignAll([null, null]);
+    fmQuestions.assignAll([null, null, null]);
+    if (!_isDisposed) {
+      fvdOtpController.clear();
+      pendingOtpController.clear();
+      pendingCommentController.clear();
+    }
+    fvdOtpText.value = "";
+    pendingOtpText.value = "";
+    pendingRTImages.assignAll([null, null, null]);
+    selectedPendingReasonMap.value = null;
+    selectedPendingReasonId.value = "";
+    isPickerActive.value = false;
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchOrders();
+    _initPendingReasons();
+  }
+
+  void _initPendingReasons() {
+    pendingReasons.assignAll([
+      {'id': '1', 'name': 'DELIVERY CANCELLED BY SELLER', 'requires_otp': true},
+      {
+        'id': '2',
+        'name': 'DELIVERY CANCELLED BY CUSTOMER',
+        'requires_otp': true
+      },
+      {'id': '3', 'name': 'SELLER NO RESPONSE', 'requires_otp': false},
+      {'id': '4', 'name': 'CUSTOMER NO RESPONSE', 'requires_otp': false},
+    ]);
+  }
+
+  void fetchOrders() async {
+    orders.assignAll([
+      {
+        'id': 101,
+        'order_id': 'ORD-98765',
+        'order_number': 'TKSH-Q-001',
+        'type': 'pickup',
+        'name': 'Krishna Store',
+        'seller_name': 'Krishna Store',
+        'seller_address': 'Sector 15, Gurgaon, Haryana 122001',
+        'seller_mobile': '9876543210',
+        'customer_name': 'John Doe',
+        'customer_address': 'G-45, Phase 3, Delhi',
+        'customer_mobile': '8800112233',
+        'items': [
+          {
+            'product_name': 'Electronics Item - 1kg',
+            'quantity': 1,
+            'item_total': 500.00
+          }
+        ],
+        'amount': '500.00',
+        'payment_method': 'Online',
+        'payment_status': 'PENDING',
+        'status': 'Pending'
+      },
+      {
+        'id': 102,
+        'order_id': 'ORD-43210',
+        'order_number': 'TKSH-Q-002',
+        'type': 'delivery',
+        'name': 'Amit Sharma',
+        'seller_name': 'Jaipur Textiles',
+        'seller_address': 'Johari Bazaar, Jaipur',
+        'seller_mobile': '9988776655',
+        'customer_name': 'Amit Sharma',
+        'customer_address': 'MG Road, Jaipur, Rajasthan 302001',
+        'customer_mobile': '7766554433',
+        'items': [
+          {
+            'product_name': 'Cotton Saree - Red',
+            'quantity': 2,
+            'item_total': 800.00
+          },
+          {'product_name': 'Silk Scarf', 'quantity': 1, 'item_total': 400.00}
+        ],
+        'amount': '1200.00',
+        'payment_method': 'Cash',
+        'payment_status': 'PAID',
+        'status': 'In Transit'
+      },
+    ]);
+  }
+
+  void goToDetails(Map<String, dynamic> order) {
+    selectedOrder.value = order;
+    currentStep.value = QuickStep.details;
+    Get.toNamed(AppRoutes.quickOrderDetails);
+  }
+
+  void startTask() {
+    // This was the old "PICKUP" direct start. Now managed by nextStepFromDetails
+    nextStepFromDetails();
+  }
+
+  void nextStepFromDetails() {
+    final order = selectedOrder.value;
+    if (order == null) return;
+
+    resetState();
+    // Simplified Pickup shows verification and images on one screen
+    currentStep.value = QuickStep.pickupVerification;
+    Get.toNamed(AppRoutes.quickPickup);
+  }
+
+  // --- Pickup Flow Actions ---
+  void nextPickupStep() {
+    if (currentStep.value == QuickStep.pickupVerification) {
+      if (isProductVisible.value == null || isWeightMatched.value == null) {
+        Get.snackbar("Error", "Please answer all verification questions");
+        return;
+      }
+      currentStep.value = QuickStep.pickupImages;
+    } else if (currentStep.value == QuickStep.pickupImages) {
+      if (pickupImages[0] == null || pickupImages[1] == null) {
+        Get.snackbar("Error", "Please take both images");
+        return;
+      }
+      showPickupSuccessPopup();
+    }
+  }
+
+  void showPickupSuccessPopup() {
+    Get.dialog(
+      barrierDismissible: false,
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 80),
+            const SizedBox(height: 20),
+            const Text(
+              "PICKUP COMPLETED",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Order picked up successfully. Starting delivery flow...",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back(); // Close dialog
+                  startFvdFlow();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text("OK",
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- Delivery Flow Actions (Legacy removed, unified with FVD) ---
+
+  // --- Mark Pending Flow ---
+  void goToMarkPending() {
+    _initPendingReasons();
+    selectedPendingReasonMap.value = null;
+    selectedPendingReasonId.value = "";
+    if (!_isDisposed) {
+      pendingOtpController.clear();
+      pendingCommentController.clear();
+    }
+    pendingOtpText.value = "";
+    pendingRTImages.assignAll([null, null, null]);
+    currentStep.value = QuickStep.markPendingReason;
+    Get.toNamed(AppRoutes.quickMarkPending);
+  }
+
+  void selectMarkPendingReason(Map<String, dynamic> reason) {
+    selectedPendingReasonMap.value = reason;
+    selectedPendingReasonId.value = reason['id'].toString();
+  }
+
+  void nextMarkPendingStep() {
+    final reason = selectedPendingReasonMap.value;
+    if (reason == null) return;
+
+    if (currentStep.value == QuickStep.markPendingReason) {
+      if (reason['id'].toString() == '2') {
+        currentStep.value = QuickStep.markPendingRTDetails;
+      } else if (reason['requires_otp'] == true) {
+        currentStep.value = QuickStep.markPendingOtp;
+      } else {
+        currentStep.value = QuickStep.markPendingComment;
+      }
+    } else if (currentStep.value == QuickStep.markPendingRTDetails) {
+      currentStep.value = QuickStep.markPendingRTOtp;
+    } else if (currentStep.value == QuickStep.markPendingRTOtp) {
+      currentStep.value = QuickStep.markPendingRTImages;
+    } else {
+      submitMarkPending();
+    }
+  }
+
+  void previousMarkPendingStep() {
+    if (currentStep.value == QuickStep.markPendingReason) {
+      Get.back();
+    } else if (currentStep.value == QuickStep.markPendingRTDetails) {
+      currentStep.value = QuickStep.markPendingReason;
+    } else if (currentStep.value == QuickStep.markPendingRTOtp) {
+      currentStep.value = QuickStep.markPendingRTDetails;
+    } else if (currentStep.value == QuickStep.markPendingRTImages) {
+      currentStep.value = QuickStep.markPendingRTOtp;
+    } else {
+      currentStep.value = QuickStep.markPendingReason;
+    }
+  }
+
+  // --- Utility Actions ---
+  void goToProfile() {
+    Get.toNamed(AppRoutes.quickProfile);
+  }
+
+  void confirmLogout() {
+    _showConfirmDialog(
+      title: "Logout",
+      message: "Are you sure you want to logout?",
+      onConfirm: () => Get.offAllNamed(AppRoutes.login),
+      confirmText: "LOGOUT",
+      confirmColor: Colors.red,
+    );
+  }
+
+  Future<bool> confirmAppExit() async {
+    bool exit = false;
+    await Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text("Exit App"),
+        content: const Text("Do you want to close the app?"),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("CANCEL")),
+          ElevatedButton(
+            onPressed: () {
+              exit = true;
+              Get.back();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text("EXIT", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    return exit;
+  }
+
+  void _showConfirmDialog({
+    required String title,
+    required String message,
+    required VoidCallback onConfirm,
+    required String confirmText,
+    required Color confirmColor,
+  }) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("CANCEL")),
+          ElevatedButton(
+            onPressed: onConfirm,
+            style: ElevatedButton.styleFrom(backgroundColor: confirmColor),
+            child:
+                Text(confirmText, style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void submitMarkPending() {
+    resetState();
+    Get.offAllNamed(AppRoutes.quickHome);
+  }
+
+  Future<void> pickImage(int index, bool isPickup) async {
+    if (isPickerActive.value) return;
+    isPickerActive.value = true;
+    try {
+      final XFile? photo =
+          await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+      if (photo != null) {
+        if (isPickup) {
+          pickupImages[index] = File(photo.path);
+        }
+      }
+    } finally {
+      isPickerActive.value = false;
+    }
+  }
+
+  Future<void> pickPendingRTImage(int index) async {
+    if (isPickerActive.value) return;
+    isPickerActive.value = true;
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 800,
+        imageQuality: 50,
+      );
+      if (image != null) {
+        pendingRTImages[index] = File(image.path);
+      }
+    } finally {
+      isPickerActive.value = false;
+    }
+  }
+
+  void startFvdFlow() {
+    fmQuestions.assignAll([null, null, null]);
+    if (!_isDisposed) {
+      fvdOtpController.clear();
+    }
+    fvdOtpText.value = "";
+    currentStep.value = QuickStep.fvdOverview;
+    Get.toNamed(AppRoutes.quickFvd);
+  }
+
+  void nextFvdStep() {
+    if (currentStep.value == QuickStep.fvdOverview) {
+      currentStep.value = QuickStep.fvdQuestions;
+    } else if (currentStep.value == QuickStep.fvdQuestions) {
+      currentStep.value = QuickStep.fvdOtp;
+    } else if (currentStep.value == QuickStep.fvdOtp) {
+      if (fvdOtpText.value.length < 4) {
+        Get.snackbar("Error", "Please enter valid OTP");
+        return;
+      }
+      submitMarkPending();
+    }
+  }
+
+  void previousFvdStep() {
+    if (currentStep.value == QuickStep.fvdOverview) {
+      Get.back();
+    } else if (currentStep.value == QuickStep.fvdQuestions) {
+      currentStep.value = QuickStep.fvdOverview;
+    } else if (currentStep.value == QuickStep.fvdOtp) {
+      currentStep.value = QuickStep.fvdQuestions;
+    }
+  }
+
+  void goBack() {
+    Get.back();
+  }
+
+  @override
+  void onClose() {
+    _isDisposed = true;
+    pendingOtpController.dispose();
+    pendingCommentController.dispose();
+    fvdOtpController.dispose();
+    super.onClose();
+  }
+}

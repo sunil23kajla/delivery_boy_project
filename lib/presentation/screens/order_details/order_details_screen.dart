@@ -29,12 +29,6 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Get.back(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Obx(() {
         final shipment = controller.shipment.value;
@@ -54,19 +48,19 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildOrderHeader(shipment, width),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               _buildSectionTitle('Customer Info'),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               _buildCustomerCard(shipment),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               _buildSectionTitle('Order Items'),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               ...items.map((item) => _buildItemCard(item)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               _buildSectionTitle('Payment Details'),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               _buildPaymentSummary(shipment),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               _buildActionButtons(),
             ],
           ),
@@ -76,86 +70,26 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
   }
 
   Widget _buildOrderHeader(OrderModel shipment, double width) {
-    final status = (shipment.orderStatus ?? 'PENDING').toUpperCase();
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(15),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Order #${shipment.orderNumber ?? "-"}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Placed on: ${shipment.createdAt?.split('T')[0] ?? "-"}',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12),
-                ),
-              ),
-            ],
+          Text(
+            'Order ID: #${shipment.id ?? "-"}',
+            style: const TextStyle(
+                color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const Divider(color: Colors.white24, height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildHeaderStat('Type', shipment.deliveryType ?? 'Normal'),
-              _buildHeaderStat(
-                  'Pending', '${shipment.slaMinutesRemaining ?? "-"} min'),
-              _buildHeaderStat('OTP', '4589'), // Static for now as per design
-            ],
+          const SizedBox(height: 5),
+          Text(
+            'Tracking ID: ${shipment.orderNumber ?? "-"}',
+            style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w500),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeaderStat(String label, String value) {
-    return Column(
-      children: [
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
-        const SizedBox(height: 5),
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14)),
-      ],
     );
   }
 
@@ -253,22 +187,34 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
   }
 
   Widget _buildPaymentSummary(OrderModel shipment) {
+    final status = (shipment.paymentStatus ?? 'Paid').toUpperCase();
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(15),
+        border:
+            Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
       ),
       child: Column(
         children: [
-          _buildSummaryRow('Payment Mode',
-              (shipment.paymentMethod ?? 'Online').toUpperCase()),
-          _buildSummaryRow('Payment Status',
-              (shipment.paymentStatus ?? 'Paid').toUpperCase(),
-              valueColor: _getStatusColor(shipment.paymentStatus)),
-          const Divider(height: 25),
-          _buildSummaryRow('Total Amount', '₹ ${shipment.totalAmount ?? 0.0}',
-              isBold: true, fontSize: 16),
+          _buildSummaryRow(
+            'Payment Mode',
+            (shipment.paymentMethod ?? 'Online').toUpperCase(),
+          ),
+          _buildSummaryRow(
+            'Payment Status',
+            status,
+            valueColor: _getStatusColor(shipment.paymentStatus),
+          ),
+          const Divider(height: 25, thickness: 1),
+          _buildSummaryRow(
+            'Total Amount',
+            '₹ ${shipment.totalAmount ?? 0.0}',
+            isBold: true,
+            fontSize: 20,
+            valueColor: AppColors.primary,
+          ),
         ],
       ),
     );
@@ -286,7 +232,7 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('UNDELIVERED',
+            child: const Text('MARK UNDELIVERED',
                 style:
                     TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
@@ -301,7 +247,7 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('COLLECT',
+            child: const Text('DELIVERED',
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.bold)),
           ),
@@ -340,16 +286,20 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
       bool isBold = false,
       double fontSize = 14}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold)),
           Text(
             value,
             style: TextStyle(
               color: valueColor,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
               fontSize: fontSize,
             ),
           ),

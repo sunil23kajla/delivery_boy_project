@@ -43,10 +43,10 @@ class ApiClient {
           .timeout(timeout);
       _logResponse(response);
       return _processResponse(response);
-    } on SocketException {
+    } on SocketException catch (e) {
       return {
         'success': false,
-        'message': "No Internet connection or server unreachable"
+        'message': "Network Error (${e.message}). Please check ISP/WiFi."
       };
     } on TimeoutException {
       return {
@@ -72,8 +72,8 @@ class ApiClient {
     try {
       final request = http.MultipartRequest('POST', Uri.parse(url));
 
-      request.headers['Accept'] = 'application/json';
-      request.headers['Connection'] = 'close';
+      request.headers['Accept'] = 'application/json, text/plain, */*';
+      request.headers['User-Agent'] = 'insomnia/11.0.0';
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
@@ -82,24 +82,32 @@ class ApiClient {
 
       if (files != null) {
         for (var fileEntry in files) {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-                fileEntry.key, fileEntry.value.path),
-          );
+          final file = fileEntry.value;
+          if (await file.exists()) {
+            final size = await file.length();
+            debugPrint(
+                "📤 [Multipart] Adding File: ${fileEntry.key} -> ${file.path} ($size bytes)");
+            request.files.add(
+              await http.MultipartFile.fromPath(
+                fileEntry.key,
+                file.path,
+              ),
+            );
+          }
         }
       }
 
       _logRequest('POST (Multipart)', url, request.headers, fields,
-          files: files?.map((e) => e.value.path).toList());
+          files: files?.map((e) => "${e.key}: ${e.value.path}").toList());
 
       final streamedResponse = await request.send().timeout(timeout);
       final response = await http.Response.fromStream(streamedResponse);
       _logResponse(response);
       return _processResponse(response);
-    } on SocketException {
+    } on SocketException catch (e) {
       return {
         'success': false,
-        'message': "No Internet connection or server unreachable"
+        'message': "Network Error (${e.message}). Please check ISP/WiFi."
       };
     } on TimeoutException {
       return {
@@ -130,10 +138,10 @@ class ApiClient {
             .timeout(timeout);
         _logResponse(response);
         return _processResponse(response);
-      } on SocketException {
+      } on SocketException catch (e) {
         return {
           'success': false,
-          'message': "No Internet connection or server unreachable"
+          'message': "Network Error (${e.message}). Please check ISP/WiFi."
         };
       } on TimeoutException {
         return {
@@ -169,10 +177,7 @@ class ApiClient {
         // Global Unauthorized Handling
         Get.find<SessionService>().clearSession();
         Get.offAllNamed(AppRoutes.login);
-        return {
-          'success': false,
-          'message': "Session expired. Please login again."
-        };
+        return {'success': false, 'message': "SESSION_EXPIRED"};
       }
       return body;
     } else {
@@ -195,5 +200,19 @@ class ApiClient {
   void _logResponse(http.Response response) {
     debugPrint('✅ [API RES] ${response.statusCode} | ${response.request?.url}');
     dev.log(response.body, name: 'API_RESPONSE');
+    dev.log('--- API RESPONSE END ---');
+  }
+
+  String _getMimeType(String filePath) {
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    } else if (filePath.endsWith('.png')) {
+      return 'image/png';
+    } else if (filePath.endsWith('.gif')) {
+      return 'image/gif';
+    } else if (filePath.endsWith('.pdf')) {
+      return 'application/pdf';
+    }
+    return 'application/octet-stream';
   }
 }

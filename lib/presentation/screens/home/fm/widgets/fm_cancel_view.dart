@@ -37,15 +37,23 @@ class FmCancelView extends GetView<FmFlowController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "REASON: ${_formatReason(controller.selectedCancelReason.value)}",
+                      "REASON: ${_formatReason(controller.selectedReason.value)}",
                       style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary),
                     ),
                     const SizedBox(height: 30),
-                    if (controller.selectedCancelReason.value ==
-                        FmCancelReason.pickupCancelledBySeller)
+                    if (controller.selectedReason.value?['requires_otp'] ==
+                            true ||
+                        controller.selectedReason.value?['requires_otp'] == 1 ||
+                        controller.selectedReason.value?['id'] == 1 ||
+                        controller.selectedReason.value?['id'] == "1" ||
+                        controller.selectedReason.value?['reason']
+                                .toString()
+                                .toLowerCase()
+                                .contains('cancelled by seller') ==
+                            true)
                       _buildOtpSection(width)
                     else
                       _buildDetailSection(),
@@ -60,41 +68,40 @@ class FmCancelView extends GetView<FmFlowController> {
     );
   }
 
-  String _formatReason(FmCancelReason? reason) {
+  String _formatReason(Map<String, dynamic>? reason) {
     if (reason == null) return "";
-    return reason
-        .toString()
-        .split('.')
-        .last
-        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}')
-        .trim()
-        .toUpperCase();
+    return (reason['name'] ?? reason['reason'] ?? "").toString().toUpperCase();
   }
 
   Widget _buildReasonList() {
-    return Column(
-      children: [
-        _buildReasonTile("PICKUP CANCELLED BY SELLER",
-            FmCancelReason.pickupCancelledBySeller),
-        _buildReasonTile("PICKUP RESCHEDULED BY SELLER",
-            FmCancelReason.pickupRescheduledBySeller),
-        _buildReasonTile(
-            "SELLER UNAVAILABLE", FmCancelReason.sellerUnavailable),
-        _buildReasonTile(
-            "INCOMPLETE NUM./AD.", FmCancelReason.incompleteAddress),
-        _buildReasonTile("MISROUTE", FmCancelReason.misroute),
-      ],
-    );
+    return Obx(() {
+      if (controller.pendingReasons.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      return Column(
+        children: controller.pendingReasons.map((reason) {
+          return _buildReasonTile(
+            (reason['name'] ?? reason['reason'] ?? "").toString().toUpperCase(),
+            reason,
+          );
+        }).toList(),
+      );
+    });
   }
 
-  Widget _buildReasonTile(String label, FmCancelReason reason) {
-    return Obx(() => RadioListTile<FmCancelReason>(
+  Widget _buildReasonTile(String label, Map<String, dynamic> reason) {
+    return Obx(() => RadioListTile<Map<String, dynamic>>(
           title: Text(label,
               style:
                   const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           value: reason,
-          groupValue: controller.selectedCancelReason.value,
-          onChanged: (val) => controller.selectedCancelReason.value = val,
+          groupValue: controller.selectedReason.value,
+          onChanged: (val) => controller.selectedReason.value = val,
           activeColor: AppColors.primary,
           contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         ));
@@ -110,9 +117,8 @@ class FmCancelView extends GetView<FmFlowController> {
         const SizedBox(height: 15),
         Center(
           child: Pinput(
-            length: 6,
+            length: 4,
             controller: controller.cancelOtpController,
-            enabled: !controller.isCancelOtpVerified.value,
             defaultPinTheme: PinTheme(
               width: 45,
               height: 50,
@@ -126,34 +132,13 @@ class FmCancelView extends GetView<FmFlowController> {
           ),
         ),
         const SizedBox(height: 25),
-        Obx(() => Center(
-              child: controller.isCancelOtpVerified.value
-                  ? const Column(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 40),
-                        SizedBox(height: 5),
-                        Text("Verified",
-                            style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    )
-                  : SizedBox(
-                      width: 150,
-                      child: ElevatedButton(
-                        onPressed: controller.cancelOtpText.value.length == 6
-                            ? controller.verifyCancelOtp
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text("VERIFY",
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-            )),
+        const Center(
+          child: Text(
+            "Please enter the 4-digit OTP provided by the seller",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
+        ),
       ],
     );
   }
@@ -213,8 +198,7 @@ class FmCancelView extends GetView<FmFlowController> {
             child: Obx(() {
               final isReasonsStep =
                   controller.currentCancelStep.value == FmCancelStep.reasons;
-              final hasSelectedReason =
-                  controller.selectedCancelReason.value != null;
+              final hasSelectedReason = controller.selectedReason.value != null;
 
               return ElevatedButton(
                 onPressed: hasSelectedReason ? controller.nextStep : null,

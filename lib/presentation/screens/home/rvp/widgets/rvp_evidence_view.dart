@@ -78,47 +78,51 @@ class RvpEvidenceView extends GetView<RvpFlowController> {
             blurRadius: 10,
             offset: const Offset(0, -5))
       ]),
-      child: Column(
+      child: Row(
         children: [
-          // The API Complete Button logic mapping single action directly
-          Obx(() => SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: controller.evidenceImages.isEmpty
+          Expanded(
+            child: OutlinedButton(
+              onPressed: controller.previousStep,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                side: const BorderSide(color: AppColors.textSecondary),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text("BACK",
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Obx(() => ElevatedButton(
+                  onPressed: (controller.evidenceImages.length < 3 ||
+                          controller.isUploading.value)
                       ? null
                       : controller.nextStep,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: controller.evidenceImages.isEmpty
-                        ? Colors.grey
-                        : Colors.green,
+                    backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
+                    disabledBackgroundColor: Colors.grey.shade300,
                   ),
-                  child: const Text("SUBMIT API & PICKUP",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              )),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: controller.previousStep,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    side: const BorderSide(color: AppColors.textSecondary),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text("BACK",
-                      style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
+                  child: controller.isUploading.value
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text("NEXT",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                )),
           ),
         ],
       ),

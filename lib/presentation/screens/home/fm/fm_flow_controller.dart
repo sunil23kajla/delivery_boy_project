@@ -37,8 +37,15 @@ class FmFlowController extends BaseController {
 
   // --- Success Flow State ---
 
+  // Details
+  var product = "".obs;
+  var phone = "".obs;
+  var lat = 0.0.obs;
+  var lng = 0.0.obs;
+
   // Step 1: Scan
   var scannedBarcode = "".obs;
+  var isCameraActive = false.obs;
   final scanController = MobileScannerController();
 
   // Step 2: Images
@@ -52,7 +59,8 @@ class FmFlowController extends BaseController {
 
   // --- Cancellation Flow State ---
   var currentCancelStep = FmCancelStep.reasons.obs;
-  var selectedCancelReason = Rxn<FmCancelReason>();
+  var pendingReasons = <Map<String, dynamic>>[].obs;
+  var selectedReason = Rxn<Map<String, dynamic>>();
   var cancelOtpText = "".obs;
   var isCancelOtpVerified = false.obs;
   final cancelOtpController = TextEditingController();
@@ -77,6 +85,13 @@ class FmFlowController extends BaseController {
             order.customer?.name,
         'address': order.deliveryAddress?.addressLine1 ?? 'Pickup Address N/A',
       };
+      // Extract specific details
+      product.value = order.items?.isNotEmpty == true
+          ? order.items!.first.productName ?? 'Product'
+          : 'Product';
+      phone.value = order.vendor?.mobileNumber ?? order.customer?.mobile ?? '';
+      lat.value = order.deliveryAddress?.latitude ?? 0.0;
+      lng.value = order.deliveryAddress?.longitude ?? 0.0;
     } else {
       shipment = args is Map<String, dynamic> ? args : {};
     }
@@ -90,9 +105,35 @@ class FmFlowController extends BaseController {
     if (shipment['address'] == null) {
       shipment['address'] = "Industrial Area, Phase 2, Delhi";
     }
+    if (product.value.isEmpty) product.value = "Fragile Electronics Kit";
+    if (phone.value.isEmpty) phone.value = "9876543210";
+    if (lat.value == 0.0) {
+      lat.value = 28.6139; // Delhi Lat
+      lng.value = 77.2090; // Delhi Lng
+    }
 
     cancelOtpController
         .addListener(() => cancelOtpText.value = cancelOtpController.text);
+
+    _fetchPendingReasons();
+  }
+
+  void _fetchPendingReasons() async {
+    try {
+      final token = _sessionService.token ?? "";
+      final res = await _shipmentRepository.getFmPendingReasons(token: token);
+      if (res != null && res['success'] == true && res['data'] != null) {
+        final data = res['data'];
+        if (data is List) {
+          pendingReasons.assignAll(data.cast<Map<String, dynamic>>());
+        } else if (data is Map && data['reasons'] is List) {
+          pendingReasons.assignAll(
+              (data['reasons'] as List).cast<Map<String, dynamic>>());
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching pending reasons: $e");
+    }
   }
 
   // --- Navigation Logic ---
@@ -116,7 +157,8 @@ class FmFlowController extends BaseController {
         }
         break;
       case FmStep.scan:
-        if (scannedBarcode.value.isNotEmpty) {
+        if (scannedBarcode.value.isNotEmpty &&
+            scannedBarcode.value != "SKIPPED") {
           await _verifyQrAndProceed();
         } else {
           currentStep.value = FmStep.images; // Skip scan
@@ -141,12 +183,12 @@ class FmFlowController extends BaseController {
       final token = _sessionService.token ?? "";
       final res = await _shipmentRepository.verifyFmQr(
         orderId: shipment['id'].toString(),
-        qrCode: scannedBarcode.value,
+        qrToken: parseQrToken(scannedBarcode.value),
         token: token,
       );
       hideLoading();
       if (res != null && res['success'] == false) {
-        Get.snackbar("Error", res['message']?.toString() ?? "Invalid QR");
+        handleError(res['message']?.toString() ?? "Invalid QR");
         return;
       }
       currentStep.value = FmStep.images;
@@ -167,10 +209,12 @@ class FmFlowController extends BaseController {
         token: token,
       );
       hideLoading();
-      if (res != null && res['success'] == false) {
+      if (res == null || res['success'] != true) {
         _showResponseDialog(
           title: "ERROR",
-          message: res['message']?.toString() ?? "Image Upload Failed",
+          message: res != null
+              ? res['message']?.toString() ?? "Image Upload Failed"
+              : "Image Upload Failed",
           isSuccess: false,
           goHomeOnOk: false,
         );
@@ -295,16 +339,42 @@ class FmFlowController extends BaseController {
   }
 
   Future<void> pickImage(int index) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    final XFile? photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 50,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
     if (photo != null) {
-      evidenceImages[index] = File(photo.path);
+      final file = File(photo.path);
+      if (await file.exists()) {
+        final size = await file.length();
+        debugPrint("📸 [FM ImagePicker] Picked index $index: ${file.path}");
+        debugPrint("📸 [FM ImagePicker] File Size: ${size / 1024} KB");
+      }
+      evidenceImages[index] = file;
     }
+  }
+
+  void toggleCamera() {
+    isCameraActive.value = !isCameraActive.value;
+  }
+
+  void skipScan() {
+    scannedBarcode.value = "SKIPPED";
+    isCameraActive.value = false;
+    nextStep();
   }
 
   void onScan(BarcodeCapture capture) {
     final List<Barcode> barcodes = capture.barcodes;
-    if (barcodes.isNotEmpty && scannedBarcode.value.isEmpty) {
-      scannedBarcode.value = barcodes.first.displayValue ?? "";
+    if (barcodes.isNotEmpty) {
+      final String code = barcodes.first.rawValue ?? "";
+      if (code.isNotEmpty) {
+        scannedBarcode.value = code;
+        isCameraActive.value = false;
+        // Don't auto-advance, let user click NEXT
+      }
     }
   }
 
@@ -313,72 +383,98 @@ class FmFlowController extends BaseController {
   void startCancelFlow() {
     isCancelFlow.value = true;
     currentCancelStep.value = FmCancelStep.reasons;
-    selectedCancelReason.value = null;
+    selectedReason.value = null;
     isCancelOtpVerified.value = false;
     cancelOtpController.clear();
     cancelReasonDetailController.clear();
+    _fetchPendingReasons();
   }
 
   void _handleCancelNext() {
     if (currentCancelStep.value == FmCancelStep.reasons) {
-      if (selectedCancelReason.value != null) {
+      if (selectedReason.value != null) {
         currentCancelStep.value = FmCancelStep.action;
       } else {
         Get.snackbar("Error", "Please select a reason");
       }
     } else {
-      if (selectedCancelReason.value ==
-          FmCancelReason.pickupCancelledBySeller) {
-        if (isCancelOtpVerified.value) {
-          _markPending();
-        } else {
-          Get.snackbar("Error", "Please verify OTP first");
-        }
+      if (selectedReason.value?['requires_otp'] == true ||
+          selectedReason.value?['requires_otp'] == 1 ||
+          selectedReason.value?['id'] == 1 ||
+          selectedReason.value?['id'] == "1" ||
+          selectedReason.value?['reason']
+                  .toString()
+                  .toLowerCase()
+                  .contains('cancelled by seller') ==
+              true) {
+        verifyFmPendingOtp();
       } else {
-        if (cancelReasonDetailController.text.trim().isNotEmpty) {
-          _markPending();
-        } else {
-          Get.snackbar("Error", "Please enter reason details");
-        }
+        markFmPending();
       }
     }
   }
 
-  Future<void> _markPending() async {
+  Future<void> markFmPending() async {
     try {
       showLoading();
-      final token = _sessionService.token ?? "placeholder_token";
-      await _shipmentRepository.updateOrderStatus(
-        orderId: shipment['orderId'].toString(),
-        status: "PENDING",
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.markFmPending(
+        orderId: shipment['id'].toString(),
+        pendingReasonId: selectedReason.value?['id'].toString() ?? "",
+        reasonDescription: cancelReasonDetailController.text.trim(),
         token: token,
       );
       hideLoading();
-      _showCancelSuccess();
+
+      if (response['success'] == true) {
+        _showResponseDialog(
+          title: "SUCCESS",
+          message: response['message'] ?? "Order marked as pending",
+          isSuccess: true,
+          goHomeOnOk: true,
+        );
+      } else {
+        handleError(response['message'] ?? "Failed to mark pending");
+      }
     } catch (e) {
+      hideLoading();
       handleError(e);
     }
   }
 
-  void verifyCancelOtp() {
-    if (cancelOtpText.value == "123456") {
-      isCancelOtpVerified.value = true;
-      Get.snackbar("Success", "OTP Verified");
-    } else {
-      Get.snackbar("Error", "Invalid OTP. Use 123456");
-    }
-  }
+  Future<void> verifyFmPendingOtp() async {
+    try {
+      if (cancelOtpText.value.length != 4) {
+        Get.snackbar("Error", "Please enter 4-digit OTP");
+        return;
+      }
 
-  void _showCancelSuccess() {
-    Get.dialog(
-      _buildActionPopup(
-        icon: Icons.info,
-        iconColor: Colors.orange,
-        title: "MARK PENDING",
-        message: "Click on OK to mark this FM as pending.",
-        onOk: () => Get.offAllNamed(AppRoutes.home),
-      ),
-    );
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.verifyFmPendingOtp(
+        orderId: shipment['id'].toString(),
+        otp: cancelOtpText.value,
+        pendingReasonId: selectedReason.value?['id'].toString() ?? "",
+        reasonDescription: cancelReasonDetailController.text.trim(),
+        token: token,
+      );
+      hideLoading();
+
+      if (response['success'] == true) {
+        isCancelOtpVerified.value = true;
+        _showResponseDialog(
+          title: "SUCCESS",
+          message: response['message'] ?? "OTP Verified & Order marked pending",
+          isSuccess: true,
+          goHomeOnOk: true,
+        );
+      } else {
+        handleError(response['message'] ?? "Invalid OTP");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
   }
 
   void _showResponseDialog({

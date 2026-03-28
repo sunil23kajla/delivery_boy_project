@@ -13,6 +13,17 @@ import '../../presentation/screens/home/rt/rt_flow_screen.dart';
 import '../../presentation/screens/home/fm/fm_flow_screen.dart';
 import '../../presentation/screens/home/summary/summary_list_screen.dart';
 import '../../presentation/screens/home/summary/summary_detail_screen.dart';
+import '../../presentation/screens/home/summary/summary_list_controller.dart';
+
+import 'package:delivery_boy/presentation/screens/home/quick/quick_flow_binding.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/quick_home_screen.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/pickup/quick_pickup_screen.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/delivery/quick_fvd_screen.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/quick_details_screen.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/quick_mark_pending_screen.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/delivery/quick_mark_undelivered_screen.dart';
+import 'package:delivery_boy/presentation/screens/home/quick/quick_profile_screen.dart';
+// Note: QuickDeliveryScreen removed in v2.5.3 simplification
 
 class AppRoutes {
   static const String splash = '/';
@@ -29,6 +40,14 @@ class AppRoutes {
   static const String fmFlow = '/fm-flow';
   static const String summaryList = '/summary-list';
   static const String summaryDetail = '/summary-detail';
+  static const String quickHome = '/quick-home';
+  static const String quickPickup = '/quick-pickup';
+  static const String quickDelivery = '/quick-delivery';
+  static const String quickOrderDetails = '/quick-order-details';
+  static const String quickMarkPending = '/quick-mark-pending';
+  static const String quickMarkUndelivered = '/quick-mark-undelivered';
+  static const String quickProfile = '/quick-profile';
+  static const String quickFvd = '/quick-fvd';
 
   static List<GetPage> routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -43,7 +62,45 @@ class AppRoutes {
     GetPage(name: rvpFlow, page: () => const RvpFlowScreen()),
     GetPage(name: rtFlow, page: () => const RtFlowScreen()),
     GetPage(name: fmFlow, page: () => const FmFlowScreen()),
-    GetPage(name: summaryList, page: () => const SummaryListScreen()),
-    GetPage(name: summaryDetail, page: () => const SummaryDetailScreen()),
+    GetPage(
+        name: summaryList,
+        page: () => const SummaryListScreen(),
+        binding: SummaryBinding()),
+    GetPage(
+        name: summaryDetail,
+        page: () => const SummaryDetailScreen(),
+        binding: SummaryBinding()),
+    GetPage(
+        name: quickHome,
+        page: () => const QuickHomeScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickPickup,
+        page: () => const QuickPickupScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickDelivery,
+        page: () => const QuickFVDScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickOrderDetails,
+        page: () => const QuickDetailsScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickMarkPending,
+        page: () => const QuickMarkPendingScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickMarkUndelivered,
+        page: () => const QuickMarkUndeliveredScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickProfile,
+        page: () => const QuickProfileScreen(),
+        binding: QuickFlowBinding()),
+    GetPage(
+        name: quickFvd,
+        page: () => const QuickFVDScreen(),
+        binding: QuickFlowBinding()),
   ];
 }

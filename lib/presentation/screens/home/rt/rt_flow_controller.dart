@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:delivery_boy/core/constants/app_routes.dart';
@@ -33,7 +34,7 @@ class RtFlowController extends BaseController {
   final ShipmentRepository _shipmentRepository = Get.find<ShipmentRepository>();
   final SessionService _sessionService = Get.find<SessionService>();
 
-  late Map<String, dynamic> shipment;
+  final RxMap<String, dynamic> shipment = <String, dynamic>{}.obs;
   var currentStep = RtStep.details.obs;
   var isCancelFlow = false.obs;
 
@@ -41,6 +42,7 @@ class RtFlowController extends BaseController {
 
   // Scan Step
   var scannedBarcode = "".obs;
+  var isCameraActive = false.obs;
   final scanController = MobileScannerController();
 
   // OTP Step
@@ -64,6 +66,7 @@ class RtFlowController extends BaseController {
   // --- Cancellation Flow State ---
   var currentCancelStep = RtCancelStep.reasons.obs;
   var selectedCancelReason = Rxn<RtCancelReason>();
+  var selectedCancelReasonId = "".obs;
   var cancelOtpText = "".obs;
   var isCancelOtpVerified = false.obs;
   final cancelOtpController = TextEditingController();
@@ -76,34 +79,53 @@ class RtFlowController extends BaseController {
     final args = Get.arguments;
     if (args != null && args.runtimeType.toString() == 'OrderModel') {
       final order = args;
-      shipment = {
+
+      // Build address string
+      String addressText = '';
+      final addr = order.deliveryAddress;
+      if (addr != null) {
+        final parts = [
+          addr.addressLine1,
+          addr.addressLine2,
+          addr.area?.name,
+          addr.city?.name,
+          addr.state?.name,
+          addr.pincode,
+        ].where((e) => e != null && e.toString().isNotEmpty).toList();
+        addressText = parts.join(', ');
+      }
+
+      shipment.assignAll({
         'id': order.id,
         'orderId': order.orderNumber ?? order.id?.toString(),
-        'barcode': order.orderNumber,
+        'barcode': order.orderNumber ?? order.trackingId,
         'product': order.items?.isNotEmpty == true
             ? order.items!.first.productName
             : "Product Details N/A",
         'name': order.customer?.name,
         'phone': order.customer?.mobile,
-      };
-    } else {
-      shipment = args is Map<String, dynamic> ? args : {};
+        'address': addressText.isNotEmpty ? addressText : "Address N/A",
+        'lat': order.deliveryAddress?.latitude,
+        'lng': order.deliveryAddress?.longitude,
+      });
+    } else if (args is Map<String, dynamic>) {
+      shipment.assignAll(args);
     }
 
-    // Fallback static data
+    // Fallback static data if necessary
     if (shipment['barcode'] == null) shipment['barcode'] = "TKSH-RT-77210";
     if (shipment['orderId'] == null) shipment['orderId'] = "ORD-RT-9902";
     if (shipment['product'] == null) {
-      shipment['product'] = "MacBook Pro M2 Cover (Slate)";
+      shipment['product'] = "Product Details N/A";
     }
 
     otpController.addListener(() => otpText.value = otpController.text);
     cancelOtpController
         .addListener(() => cancelOtpText.value = cancelOtpController.text);
-    recipientNameController
-        .addListener(() => nameText.value = recipientNameController.text);
-    recipientPhoneController
-        .addListener(() => phoneText.value = recipientPhoneController.text);
+    recipientNameController.addListener(
+        () => nameText.value = recipientNameController.text.trim());
+    recipientPhoneController.addListener(
+        () => phoneText.value = recipientPhoneController.text.trim());
   }
 
   // --- Navigation Logic ---
@@ -120,29 +142,27 @@ class RtFlowController extends BaseController {
         break;
       case RtStep.scan:
         if (scannedBarcode.value == "SKIPPED") {
-          currentStep.value = RtStep.options;
-        } else if (scannedBarcode.value.isNotEmpty) {
           currentStep.value = RtStep.otp;
         } else {
-          Get.snackbar("Error", "Please scan or skip to proceed");
+          _verifyQr();
         }
         break;
       case RtStep.otp:
-        if (otpText.value == "123456") {
-          isOtpVerified.value = true;
-          currentStep.value = RtStep.options;
-        } else {
-          Get.snackbar("Error", "Invalid OTP. Use 123456");
-        }
+        _verifyDeliveryOtp();
         break;
       case RtStep.options:
         if (selectedRecipientType.value.isNotEmpty) {
           if (selectedRecipientType.value == 'seller') {
             recipientNameController.text = shipment['name'] ?? "Seller XYZ";
             recipientPhoneController.text = shipment['phone'] ?? "9876543210";
+            // Manually trigger Rx update for immediate button enablement
+            nameText.value = recipientNameController.text;
+            phoneText.value = recipientPhoneController.text;
           } else {
             recipientNameController.clear();
             recipientPhoneController.clear();
+            nameText.value = "";
+            phoneText.value = "";
           }
           currentStep.value = RtStep.recipient;
         } else {
@@ -169,18 +189,37 @@ class RtFlowController extends BaseController {
     }
   }
 
+  // No longer needed as we call completeRtDelivery with all details in the next step
+  /*
+  Future<void> _submitRecipientDetails() async {
+    ...
+  }
+  */
+
   Future<void> _completeDelivery() async {
     try {
       showLoading();
-      final token = _sessionService.token ?? "placeholder_token";
-      await _shipmentRepository.updateOrderStatus(
-        orderId: shipment['orderId'].toString(),
-        status: "DELIVERED",
+      final token = _sessionService.token ?? "";
+      final nonNullImages = evidenceImages.whereType<File>().toList();
+
+      final response = await _shipmentRepository.completeRtDelivery(
+        orderId: shipment['id'].toString(),
+        receiverName: recipientNameController.text,
+        receiverMobile: recipientPhoneController.text,
+        deliveryNotes: "",
+        photos: nonNullImages,
         token: token,
       );
+
       hideLoading();
-      _showSuccessDialog();
+
+      if (response['success'] == true) {
+        _showSuccessDialog();
+      } else {
+        handleError(response['message'] ?? "Failed to complete delivery");
+      }
     } catch (e) {
+      hideLoading();
       handleError(e);
     }
   }
@@ -206,11 +245,7 @@ class RtFlowController extends BaseController {
         currentStep.value = RtStep.scan;
         break;
       case RtStep.options:
-        if (scannedBarcode.value == "SKIPPED") {
-          currentStep.value = RtStep.scan;
-        } else {
-          currentStep.value = RtStep.otp;
-        }
+        currentStep.value = RtStep.otp;
         break;
       case RtStep.recipient:
         currentStep.value = RtStep.options;
@@ -228,18 +263,37 @@ class RtFlowController extends BaseController {
     nextStep();
   }
 
+  void toggleCamera() {
+    isCameraActive.value = !isCameraActive.value;
+  }
+
   void onScan(BarcodeCapture capture) {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isNotEmpty) {
-      scannedBarcode.value = barcodes.first.displayValue ?? "";
-      nextStep();
+      final String code = barcodes.first.rawValue ?? "";
+      if (code.isNotEmpty) {
+        scannedBarcode.value = code;
+        isCameraActive.value = false;
+        // Don't auto-advance, let user click NEXT
+      }
     }
   }
 
   Future<void> pickImage(int index) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    final XFile? photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 50,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
     if (photo != null) {
-      evidenceImages[index] = File(photo.path);
+      final file = File(photo.path);
+      if (await file.exists()) {
+        final size = await file.length();
+        debugPrint("📸 [RT ImagePicker] Picked index $index: ${file.path}");
+        debugPrint("📸 [RT ImagePicker] File Size: ${size / 1024} KB");
+      }
+      evidenceImages[index] = file;
     }
   }
 
@@ -262,67 +316,145 @@ class RtFlowController extends BaseController {
         Get.snackbar("Error", "Please select a reason");
       }
     } else {
+      // Check if this reason requires OTP or just mark undelivered
       if (selectedCancelReason.value ==
           RtCancelReason.cancelledBySellerContentMismatch) {
-        if (isCancelOtpVerified.value) {
-          _markPending();
-        } else {
-          Get.snackbar("Error", "Please verify OTP first");
-        }
+        verifyCancelOtp();
       } else {
-        if (cancelReasonDetailController.text.trim().isNotEmpty) {
-          _markPending();
-        } else {
-          Get.snackbar("Error", "Please enter reason details");
-        }
+        markRtUndelivered();
       }
     }
   }
 
-  Future<void> _markPending() async {
+  Future<void> markRtUndelivered() async {
     try {
       showLoading();
-      final token = _sessionService.token ?? "placeholder_token";
-      await _shipmentRepository.updateOrderStatus(
-        orderId: shipment['orderId'].toString(),
-        status: "PENDING",
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.markRtUndelivered(
+        orderId: shipment['id'].toString(),
+        undeliveryReasonId: selectedCancelReasonId.value,
+        reasonDescription: cancelReasonDetailController.text.trim(),
         token: token,
       );
       hideLoading();
-      _showCancelSuccess();
+
+      if (response['success'] == true) {
+        _showSuccessDialog(
+            message: response['message'] ??
+                "RT order marked as undelivered successfully");
+      } else {
+        handleError(response['message'] ?? "Failed to mark undelivered");
+      }
     } catch (e) {
+      hideLoading();
       handleError(e);
     }
   }
 
-  void verifyCancelOtp() {
-    if (cancelOtpText.value == "123456") {
-      isCancelOtpVerified.value = true;
-      Get.snackbar("Success", "OTP Verified");
-    } else {
-      Get.snackbar("Error", "Invalid OTP. Use 123456");
+  Future<void> _verifyQr() async {
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "";
+
+      // Improved QR token parsing
+      String finalQrToken = scannedBarcode.value;
+      if (finalQrToken.startsWith('{') && finalQrToken.endsWith('}')) {
+        try {
+          // Attempt to parse as JSON if it looks like an object
+          final Map<String, dynamic> parsedJson =
+              jsonDecode(finalQrToken) as Map<String, dynamic>;
+          if (parsedJson.containsKey('token')) {
+            finalQrToken = parsedJson['token'].toString();
+          }
+        } catch (e) {
+          debugPrint("QR parsing error (falling back to raw): $e");
+        }
+      }
+
+      final response = await _shipmentRepository.verifyRtQr(
+        orderId: shipment['id'].toString(),
+        qrToken: finalQrToken,
+        token: token,
+      );
+      hideLoading();
+
+      if (response['success'] == true) {
+        currentStep.value = RtStep.otp;
+      } else {
+        handleError(response['message'] ?? "QR Verification Failed");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
     }
   }
 
-  void _showCancelSuccess() {
-    Get.dialog(
-      _buildActionPopup(
-        icon: Icons.info,
-        iconColor: Colors.orange,
-        title: "MARK PENDING",
-        message: "Click on OK to mark this RT as pending.",
-        onOk: () => Get.offAllNamed(AppRoutes.home),
-      ),
-    );
+  Future<void> _verifyDeliveryOtp() async {
+    try {
+      if (otpText.value.length != 4) {
+        Get.snackbar("Error", "Please enter 4-digit OTP");
+        return;
+      }
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.verifyRtOtp(
+        orderId: shipment['id'].toString(),
+        otp: otpText.value,
+        token: token,
+      );
+      hideLoading();
+
+      if (response['success'] == true) {
+        isOtpVerified.value = true;
+        currentStep.value = RtStep.options;
+      } else {
+        handleError(response['message'] ?? "Invalid OTP");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
   }
 
-  void _showSuccessDialog() {
+  Future<void> verifyCancelOtp() async {
+    try {
+      if (cancelOtpText.value.length != 4) {
+        Get.snackbar("Error", "Please enter 4-digit OTP");
+        return;
+      }
+
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final response = await _shipmentRepository.verifyRtUndeliveredOtp(
+        orderId: shipment['id'].toString(),
+        otp: cancelOtpText.value,
+        undeliveryReasonId: selectedCancelReasonId.value,
+        reasonDescription: cancelReasonDetailController.text.trim(),
+        token: token,
+      );
+      hideLoading();
+
+      if (response['success'] == true) {
+        isCancelOtpVerified.value = true;
+        _showSuccessDialog(
+            message: response['message'] ??
+                "OTP Verified & RT order marked as undelivered.");
+      } else {
+        handleError(response['message'] ?? "Invalid OTP");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
+    }
+  }
+
+  void _showSuccessDialog({String? message}) {
     Get.dialog(
       _buildActionPopup(
         icon: Icons.check_circle,
         iconColor: Colors.green,
         title: "SUCCESS",
-        message: "Delivery Completed Successfully",
+        message: message ?? "RT order updated successfully.",
         onOk: () => Get.offAllNamed(AppRoutes.home),
       ),
       barrierDismissible: false,

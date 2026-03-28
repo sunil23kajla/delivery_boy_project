@@ -14,147 +14,224 @@ class RvpScanView extends GetView<RvpFlowController> {
     return Column(
       children: [
         Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(width * 0.05),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(width * 0.07),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "SCAN QR/BARCODE ON THE POLYTHENE",
+                  'SCAN SECURE BARCODE/QR',
                   style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(15),
+                const SizedBox(height: 10),
+                const Text(
+                  'Scan the barcode or QR code on the package to ensure the security of the shipment.',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                ),
+                const SizedBox(height: 30),
+
+                // Camera Area
+                Obx(() => Container(
+                      width: double.infinity,
+                      height: width * 0.75,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: Colors.grey.shade300, width: 2),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: controller.isCameraActive.value
+                          ? Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                MobileScanner(
+                                  controller: controller.scanController,
+                                  onDetect: controller.onScan,
+                                ),
+                                _ScanFrame(size: width * 0.5),
+                              ],
+                            )
+                          : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.qr_code_scanner,
+                                      size: 60,
+                                      color: Colors.white.withOpacity(0.5)),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton(
+                                    onPressed: controller.toggleCamera,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 40, vertical: 15),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                    child: const Text('SCAN',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                    )),
+
+                const SizedBox(height: 30),
+
+                // Skip Button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => controller.skipQrScan(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: MobileScanner(
-                      controller: controller.scanController,
-                      onDetect: controller.onScan,
+                    child: const Text(
+                      'PROCESS NEXT WITHOUT\nSCAN SECURE QR/BARCODE',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Obx(() => Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: controller.scannedBarcode.value.isNotEmpty
-                                ? Colors.green
-                                : Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        controller.scannedBarcode.value.isEmpty
-                            ? "No code detected"
-                            : "Scanned: ${controller.scannedBarcode.value}",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: controller.scannedBarcode.value.isNotEmpty
-                              ? Colors.green
-                              : Colors.grey,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    )),
               ],
             ),
           ),
         ),
-        _buildFooter(width),
+
+        // Footer Buttons
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: width * 0.07, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: controller.previousStep,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('BACK',
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Obx(() => ElevatedButton(
+                      onPressed: (controller.scannedBarcode.value.isNotEmpty &&
+                              !controller.isVerifying.value)
+                          ? () => controller.verifyQrCode()
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        disabledBackgroundColor: Colors.grey.shade300,
+                      ),
+                      child: controller.isVerifying.value
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('COMPLETE RVP',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                    )),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
+}
 
-  Widget _buildFooter(double width) {
+class _ScanFrame extends StatelessWidget {
+  final double size;
+  const _ScanFrame({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [
-        BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5))
-      ]),
-      child: Row(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
+      ),
+      child: const Stack(
         children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: controller.previousStep,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                side: const BorderSide(color: AppColors.textSecondary),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text("BACK",
-                  style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Obx(() => ElevatedButton(
-                  onPressed: controller.scannedBarcode.value.isNotEmpty
-                      ? () => _showSuccessDialog()
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    disabledBackgroundColor: Colors.grey.shade300,
-                  ),
-                  child: const Text("COMPLETE RVP",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                )),
-          ),
+          _Corner(alignment: Alignment.topLeft),
+          _Corner(alignment: Alignment.topRight),
+          _Corner(alignment: Alignment.bottomLeft),
+          _Corner(alignment: Alignment.bottomRight),
         ],
       ),
     );
   }
+}
 
-  void _showSuccessDialog() {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 80),
-              const SizedBox(height: 20),
-              const Text("CONFIRM",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              const Text("After click on complete, RVP will be processed.",
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Get.offAllNamed('/home'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text("OK",
-                      style: TextStyle(color: Colors.white, fontSize: 18)),
-                ),
-              ),
-            ],
+class _Corner extends StatelessWidget {
+  final Alignment alignment;
+  const _Corner({required this.alignment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: alignment,
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          border: Border(
+            top: alignment == Alignment.topLeft ||
+                    alignment == Alignment.topRight
+                ? const BorderSide(color: AppColors.primary, width: 4)
+                : BorderSide.none,
+            bottom: alignment == Alignment.bottomLeft ||
+                    alignment == Alignment.bottomRight
+                ? const BorderSide(color: AppColors.primary, width: 4)
+                : BorderSide.none,
+            left: alignment == Alignment.topLeft ||
+                    alignment == Alignment.bottomLeft
+                ? const BorderSide(color: AppColors.primary, width: 4)
+                : BorderSide.none,
+            right: alignment == Alignment.topRight ||
+                    alignment == Alignment.bottomRight
+                ? const BorderSide(color: AppColors.primary, width: 4)
+                : BorderSide.none,
           ),
         ),
       ),

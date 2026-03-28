@@ -25,31 +25,10 @@ class HomeScreen extends StatelessWidget {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: Text(
-            AppStrings.homePage,
-            style: const TextStyle(
-                color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: CircleAvatar(
-                radius: 12,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: const Icon(Icons.person,
-                    color: AppColors.primary, size: 18),
-              ),
-              onPressed: () => Get.toNamed(AppRoutes.settings),
-            ),
-            const SizedBox(width: 10),
-          ],
-        ),
         body: Obx(() => controller.rxIndex.value == 0
             ? Column(
                 children: [
-                  // Greeting Banner
+                  // Enhanced Greeting Header
                   Obx(() {
                     final now = DateTime.now();
                     final hour = now.hour;
@@ -74,133 +53,184 @@ class HomeScreen extends StatelessWidget {
                     ];
                     final dateStr =
                         '${now.day} ${months[now.month - 1]} ${now.year}';
-                    return Column(
-                      children: [
-                        Container(
-                          margin: EdgeInsets.fromLTRB(
-                              width * 0.04, 10, width * 0.04, 0),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primary, Color(0xFF1976D2)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    final topPadding = MediaQuery.of(context).padding.top;
+
+                    return Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 20),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFF0D47A1), // Deep Blue
+                            Color(0xFF1976D2), // Royal Blue
+                            Color(0xFF42A5F5), // Light Blue
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Obx(() => Text(
-                                              '$greeting, ${controller.rxDeliveryManName.value} 👋',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            )),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          dateStr,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$greeting, 👋',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Obx(() => Text(
+                                          controller.rxDeliveryManName.value,
                                           style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
+                                            color: Colors.white,
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white24,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Image.asset(
-                                      'assets/images/logo.png',
-                                      width: 30,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                ],
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        )),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 14),
                               Row(
                                 children: [
-                                  _QuickStat(
-                                      label: 'Total',
-                                      value: '${controller.rxTotalCount.value}',
-                                      color: Colors.white),
-                                  const SizedBox(width: 12),
-                                  _QuickStat(
-                                      label: 'Delivered',
-                                      value:
-                                          '${controller.rxDeliveredCount.value}',
-                                      color: Colors.greenAccent),
-                                  const SizedBox(width: 12),
-                                  _QuickStat(
-                                      label: 'Pending',
-                                      value:
-                                          '${controller.rxPendingCount.value}',
-                                      color: Colors.orangeAccent),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh_rounded,
+                                        color: Colors.white70),
+                                    onPressed: () {
+                                      controller.fetchOrders(
+                                          showLoadingIndicator: true);
+                                      controller.fetchSummary();
+                                    },
+                                  ),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        Get.toNamed(AppRoutes.settings),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        shape: BoxShape.circle,
+                                        border:
+                                            Border.all(color: Colors.white30),
+                                      ),
+                                      child: const CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Colors.white,
+                                        child: Icon(Icons.person,
+                                            color: Color(0xFF0D47A1), size: 24),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
                           ),
-                        ),
-                        // Search Bar
-                        Container(
-                          margin: EdgeInsets.fromLTRB(
-                              width * 0.04, 15, width * 0.04, 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                dateStr,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  "Field Executive",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          child: TextField(
-                            autofocus: false,
-                            onChanged: (value) =>
-                                controller.rxSearchText.value = value,
-                            decoration: InputDecoration(
-                              hintText: "Search by name or tracking ID...",
-                              prefixIcon: const Icon(Icons.search,
-                                  color: AppColors.textSecondary),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 15),
-                              suffixIcon: Obx(
-                                  () => controller.rxSearchText.value.isNotEmpty
-                                      ? IconButton(
-                                          icon:
-                                              const Icon(Icons.clear, size: 20),
-                                          onPressed: () {
-                                            controller.rxSearchText.value = "";
-                                          },
-                                        )
-                                      : const SizedBox.shrink()),
-                            ),
+                          const SizedBox(height: 25),
+                          Row(
+                            children: [
+                              _QuickStat(
+                                  label: 'TOTAL DESPATCH',
+                                  value: '${controller.rxTotalCount.value}',
+                                  color: Colors.white),
+                              const Spacer(),
+                              _QuickStat(
+                                  label: 'TOTAL SUCCESS',
+                                  value: '${controller.rxDeliveredCount.value}',
+                                  color:
+                                      const Color(0xFF69F0AE)), // GreenAccent
+                              const Spacer(),
+                              _QuickStat(
+                                  label: 'TOTAL FAILED',
+                                  value: '${controller.rxPendingCount.value}',
+                                  color:
+                                      const Color(0xFFFFD180)), // OrangeAccent
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     );
                   }),
+                  // Search Bar
+                  Container(
+                    margin:
+                        EdgeInsets.fromLTRB(width * 0.04, 15, width * 0.04, 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      autofocus: false,
+                      onChanged: (value) =>
+                          controller.rxSearchText.value = value,
+                      decoration: InputDecoration(
+                        hintText: "Search by name or tracking ID...",
+                        prefixIcon: const Icon(Icons.search,
+                            color: AppColors.textSecondary),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 15),
+                        suffixIcon:
+                            Obx(() => controller.rxSearchText.value.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 20),
+                                    onPressed: () {
+                                      controller.rxSearchText.value = "";
+                                    },
+                                  )
+                                : const SizedBox.shrink()),
+                      ),
+                    ),
+                  ),
 
                   // Filter Tabs
                   SingleChildScrollView(
@@ -337,31 +367,6 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Koi order assign nahi hua abhi.\nNeeche pull karke refresh karein.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF9E9E9E),
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 28),
-              OutlinedButton.icon(
-                onPressed: () => Get.find<HomeController>()
-                    .fetchOrders(showLoadingIndicator: true),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Refresh'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

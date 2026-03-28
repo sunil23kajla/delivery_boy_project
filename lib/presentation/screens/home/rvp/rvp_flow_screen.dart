@@ -6,6 +6,7 @@ import 'rvp_flow_controller.dart';
 import 'widgets/rvp_cancel_view.dart';
 import 'widgets/rvp_details_view.dart';
 import 'widgets/rvp_evidence_view.dart';
+import 'widgets/rvp_scan_view.dart';
 
 class RvpFlowScreen extends StatelessWidget {
   const RvpFlowScreen({super.key});
@@ -25,7 +26,7 @@ class RvpFlowScreen extends StatelessWidget {
         ),
         title: Obx(() {
           if (controller.isCancelFlow.value) {
-            return const Text("CANCEL RVP",
+            return const Text("CANCEL RETURN",
                 style: TextStyle(
                     color: AppColors.textPrimary, fontWeight: FontWeight.bold));
           }
@@ -33,20 +34,29 @@ class RvpFlowScreen extends StatelessWidget {
           String title = "";
           switch (controller.currentStep.value) {
             case RvpStep.details:
-              title = "RVP Details";
+              title = "RETURN DETAILS";
+              break;
+            case RvpStep.checklist:
+              title = "VERIFICATION";
               break;
             case RvpStep.evidence:
-              title = "Evidence";
+              title = "RETURN EVIDENCE";
+              break;
+            case RvpStep.scan:
+              title = "SCAN QR CODE";
               break;
             case RvpStep.complete:
-              title = "Completed";
+              title = "PICKUP SUCCESS";
               break;
             default:
-              title = "RVP Flow";
+              title = "RVP FLOW";
           }
           return Text(title,
               style: const TextStyle(
-                  color: AppColors.textPrimary, fontWeight: FontWeight.bold));
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5));
         }),
       ),
       body: Obx(() {
@@ -57,6 +67,8 @@ class RvpFlowScreen extends StatelessWidget {
             return const RvpDetailsView();
           case RvpStep.evidence:
             return const RvpEvidenceView();
+          case RvpStep.scan:
+            return const RvpScanView();
           case RvpStep.complete:
             return const Center(
                 child:

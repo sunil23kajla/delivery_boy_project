@@ -22,19 +22,15 @@ class RtOtpView extends GetView<RtFlowController> {
                 const Text("VERIFY OTP",
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 10),
-                const Text("SEND OTP",
-                    style: TextStyle(
-                        color: AppColors.primary, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 30),
                 Pinput(
-                  length: 6,
+                  length: 4,
                   controller: controller.otpController,
                   defaultPinTheme: PinTheme(
-                    width: 45,
-                    height: 50,
+                    width: 55,
+                    height: 60,
                     textStyle: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                        fontSize: 22, fontWeight: FontWeight.bold),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(10),
@@ -78,7 +74,7 @@ class RtOtpView extends GetView<RtFlowController> {
           const SizedBox(width: 15),
           Expanded(
             child: Obx(() => ElevatedButton(
-                  onPressed: controller.otpText.value.length == 6
+                  onPressed: controller.otpText.value.length == 4
                       ? controller.nextStep
                       : null,
                   style: ElevatedButton.styleFrom(

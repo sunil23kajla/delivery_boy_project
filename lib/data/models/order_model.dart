@@ -20,6 +20,11 @@ class OrderModel {
   final DeliveryAddressModel? deliveryAddress;
   final List<OrderItemModel>? items;
   final List<PaymentModel>? payments;
+  final double? itemsTotal;
+  final double? deliveryCharge;
+  final double? totalPayable;
+  final double? totalPaid;
+  final double? totalDue;
   final Map<String, dynamic>? rtData;
   final Map<String, dynamic>? rvpData;
 
@@ -45,36 +50,66 @@ class OrderModel {
     this.deliveryAddress,
     this.items,
     this.payments,
+    this.itemsTotal,
+    this.deliveryCharge,
+    this.totalPayable,
+    this.totalPaid,
+    this.totalDue,
     this.rtData,
     this.rvpData,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    // Robust address mapping for summary API
+    DeliveryAddressModel? fallbackAddress;
+    if (json['customer_address'] != null) {
+      fallbackAddress =
+          DeliveryAddressModel(addressLine1: json['customer_address']);
+    }
+
+    // Robust customer mapping for summary API
+    CustomerModel? fallbackCustomer;
+    if (json['customer_name'] != null || json['mobileno'] != null) {
+      fallbackCustomer = CustomerModel(
+        name: json['customer_name'],
+        mobile: json['mobileno'],
+      );
+    }
+
     return OrderModel(
-      id: json['id'],
-      orderNumber: json['order_number'],
+      id: json['id'] ?? json['order_id'],
+      orderNumber: json['order_number'] ?? json['tracking_id'],
       orderStatus: json['order_status'],
       orderType: json['order_type'],
       deliveryType: json['delivery_type'],
-      isExpress: json['is_express'],
-      slaMinutes: json['sla_minutes'],
+      isExpress: json['is_express'] is bool
+          ? json['is_express']
+          : json['is_express'] == 1,
+      slaMinutes: json['sla_minutes'] is int
+          ? json['sla_minutes']
+          : int.tryParse(json['sla_minutes']?.toString() ?? ''),
       slaMinutesRemaining: json['sla_minutes_remaining'],
-      isSlaBreached: json['is_sla_breached'],
+      isSlaBreached:
+          json['sla_status'] == 'breached' || json['is_sla_breached'] == true,
       slaStatus: json['sla_status'],
       paymentMethod: json['payment_method'],
       paymentStatus: json['payment_status'],
-      totalAmount: _parseDouble(json['total_amount']),
+      totalAmount: _parseFloatOrNum(json['total_payable'] ??
+          json['payable_amount'] ??
+          json['total_amount'] ??
+          json['grand_total'] ??
+          json['amount']),
       createdAt: json['created_at'],
       confirmedAt: json['confirmed_at'],
       deliveredAt: json['delivered_at'],
       customer: json['customer'] != null
           ? CustomerModel.fromJson(json['customer'])
-          : null,
+          : fallbackCustomer,
       vendor:
           json['vendor'] != null ? VendorModel.fromJson(json['vendor']) : null,
       deliveryAddress: json['delivery_address'] != null
           ? DeliveryAddressModel.fromJson(json['delivery_address'])
-          : null,
+          : fallbackAddress,
       items: json['items'] != null
           ? (json['items'] as List)
               .map((i) => OrderItemModel.fromJson(i))
@@ -85,8 +120,13 @@ class OrderModel {
               .map((p) => PaymentModel.fromJson(p))
               .toList()
           : null,
-      rtData: json['rt'] as Map<String, dynamic>?,
-      rvpData: json['rvp'] as Map<String, dynamic>?,
+      itemsTotal: _parseDouble(json['items_total']),
+      deliveryCharge: _parseDouble(json['delivery_charge']),
+      totalPayable: _parseDouble(json['total_payable']),
+      totalPaid: _parseDouble(json['total_paid']),
+      totalDue: _parseDouble(json['total_due']),
+      rtData: (json['rt_data'] ?? json['rt']) as Map<String, dynamic>?,
+      rvpData: (json['rvp_data'] ?? json['rvp']) as Map<String, dynamic>?,
     );
   }
 
@@ -107,11 +147,18 @@ class OrderModel {
     };
   }
 
-  static double? _parseDouble(dynamic value) {
+  static double? _parseFloatOrNum(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value);
+    if (value is String) {
+      // Remove commas and other non-numeric chars if needed, but tryParse is usually enough
+      return double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
+    }
     return null;
+  }
+
+  static double? _parseDouble(dynamic value) {
+    return _parseFloatOrNum(value);
   }
 }
 

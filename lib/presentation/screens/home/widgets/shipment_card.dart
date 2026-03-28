@@ -68,11 +68,19 @@ Color _categoryColor(String category) {
 class ShipmentCard extends StatelessWidget {
   final OrderModel shipment;
   final bool navigateOnTap;
+  final String? forcedStatus;
+  final Color? forcedColor;
+  final bool showActions;
+  final bool isQuick;
 
   const ShipmentCard({
     super.key,
     required this.shipment,
     this.navigateOnTap = true,
+    this.forcedStatus,
+    this.forcedColor,
+    this.showActions = true,
+    this.isQuick = false,
   });
 
   @override
@@ -151,9 +159,9 @@ class ShipmentCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    uiOrderType,
+                    forcedStatus ?? uiOrderType,
                     style: TextStyle(
-                      color: catColor,
+                      color: forcedColor ?? catColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -193,71 +201,93 @@ class ShipmentCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Divider(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Payment',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 11),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              paymentMethod,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                                fontSize: 13,
+            if (category == 'FWD' && !isQuick) ...[
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Payment',
+                          style: TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                paymentMethod,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          if (isCod && totalAmount != null)
-                            _Badge(
-                              label: '₹ $totalAmount',
-                              bg: Colors.green.shade50,
-                              border: Colors.green.shade200,
-                              textColor: Colors.green.shade700,
-                            )
-                          else
-                            _Badge(
-                              label: paymentStatus,
-                              bg: Colors.blue.shade50,
-                              border: Colors.blue.shade200,
-                              textColor: Colors.blue,
-                            ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 6),
+                            if (isCod && totalAmount != null)
+                              _Badge(
+                                label: '₹ $totalAmount',
+                                bg: Colors.green.shade50,
+                                border: Colors.green.shade200,
+                                textColor: Colors.green.shade700,
+                              )
+                            else
+                              _Badge(
+                                label: paymentStatus,
+                                bg: Colors.blue.shade50,
+                                border: Colors.blue.shade200,
+                                textColor: Colors.blue,
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    _ActionButton(
-                      icon: Icons.phone,
-                      color: Colors.green,
-                      onTap: () => ExternalActions.makeCall(phone),
+                  if (showActions)
+                    Row(
+                      children: [
+                        _ActionButton(
+                          icon: Icons.phone,
+                          color: Colors.green,
+                          onTap: () => ExternalActions.makeCall(phone),
+                        ),
+                        const SizedBox(width: 12),
+                        _ActionButton(
+                          icon: Icons.navigation_outlined,
+                          color: Colors.blue,
+                          onTap: () => ExternalActions.openMap(lat, lng),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    _ActionButton(
-                      icon: Icons.navigation_outlined,
-                      color: Colors.blue,
-                      onTap: () => ExternalActions.openMap(lat, lng),
+                ],
+              ),
+            ] else ...[
+              const Divider(height: 20),
+                  if (showActions)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _ActionButton(
+                          icon: Icons.phone,
+                          color: Colors.green,
+                          onTap: () => ExternalActions.makeCall(phone),
+                        ),
+                        const SizedBox(width: 12),
+                        _ActionButton(
+                          icon: Icons.navigation_outlined,
+                          color: Colors.blue,
+                          onTap: () => ExternalActions.openMap(lat, lng),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
-            ),
+            ],
           ],
         ),
       ),

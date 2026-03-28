@@ -4,7 +4,7 @@ class AppTranslations extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {
-          'appName': 'Delivery Boy',
+          'appName': 'Field Executive',
           'login': 'Login',
           'welcome': 'Welcome back!',
           'enterEmailOrPhone': 'Enter Email or Phone',
@@ -79,6 +79,8 @@ class AppTranslations extends Translations {
           'exitMessage': 'Do you want to exit the app?',
           'yes': 'Yes',
           'no': 'No',
+          'noTasksFound': 'No tasks found for you today!',
+          'failedToLoad': 'Failed to load tasks. Please try again.',
         },
         'hi_IN': {
           'appName': 'डेलीवरी बॉय',
@@ -158,6 +160,8 @@ class AppTranslations extends Translations {
           'exitMessage': 'क्या आप ऐप से बाहर निकलना चाहते हैं?',
           'yes': 'हाँ',
           'no': 'नहीं',
+          'noTasksFound': 'आज आपके लिए कोई काम नहीं मिला!',
+          'failedToLoad': 'टास्क लोड करने में विफल। कृपया पुन: प्रयास करें।',
         },
       };
 }

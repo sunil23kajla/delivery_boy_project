@@ -84,41 +84,86 @@ class UndeliveredController extends BaseController {
     currentStep.value = UndeliveredStep.reasons;
   }
 
-  void verifyOtp() {
-    if (otpController.text.length == 6) {
-      isOtpVerified.value = true;
-      Get.snackbar(AppStrings.success, "OTP Verified Successfully");
-    } else {
-      Get.snackbar(AppStrings.error, "Please enter a valid 6-digit OTP");
+  Future<void> verifyOtp() async {
+    if (otpController.text.length != 4) {
+      Get.snackbar(AppStrings.error, "Please enter a valid 4-digit OTP");
+      return;
+    }
+
+    try {
+      showLoading();
+      final token = _sessionService.token ?? "";
+      final orderId = shipment.id?.toString() ?? "";
+
+      // Determine if it's FWD or other (though the controller seems generic)
+      // The user specifically asked for FWD mark undelivered OTP.
+      final reasonId =
+          undeliveryReasons[selectedReasonIndex.value]['id']?.toString() ?? "";
+
+      final response = await _shipmentRepository.verifyFwdUndeliveredOtp(
+        orderId: orderId,
+        pendingReasonId: reasonId,
+        reasonDescription: reasonDetailsController.text.trim(),
+        otp: otpController.text,
+        token: token,
+      );
+
+      hideLoading();
+      if (response['success'] == true) {
+        isOtpVerified.value = true;
+        Get.snackbar(AppStrings.success,
+            response['message'] ?? "OTP Verified Successfully");
+      } else {
+        handleError(response['message'] ?? "OTP Verification Failed");
+      }
+    } catch (e) {
+      hideLoading();
+      handleError(e);
     }
   }
 
   Future<void> completeProcess() async {
-    if (isOtpReason && !isOtpVerified.value && otpController.text.isNotEmpty) {
-      Get.snackbar(AppStrings.error, "Please verify OTP first");
-      return;
-    }
-
-    // In actual implementation, we'll bypass OTP requirement check if the backend doesn't strictly enforce it
-    // or if the UI doesn't have an endpoint for verifying generic undelivered OTP.
-
-    // User requested that notes/details are optional, so we remove the strict empty check.
-    // if (!isOtpReason && reasonDetailsController.text.isEmpty) {
-    //   Get.snackbar(AppStrings.error, "Please enter the reason details");
-    //   return;
-    // }
+    final orderId = shipment.id?.toString();
+    if (orderId == null) return;
 
     try {
-      final orderId = shipment.id?.toString();
-      if (orderId == null) {
+      showLoading();
+      final token = _sessionService.token ?? "";
+
+      // 1. If it's an OTP reason, just call verify API and exit (as it marks undelivered too)
+      if (isOtpReason) {
+        if (otpController.text.length != 4) {
+          hideLoading();
+          Get.snackbar(AppStrings.error, "Please enter a valid 4-digit OTP");
+          return;
+        }
+
+        final reasonId =
+            undeliveryReasons[selectedReasonIndex.value]['id']?.toString() ??
+                "";
+
+        final otpResponse = await _shipmentRepository.verifyFwdUndeliveredOtp(
+          orderId: orderId,
+          pendingReasonId: reasonId,
+          reasonDescription: reasonDetailsController.text.trim(),
+          otp: otpController.text,
+          token: token,
+        );
+
+        hideLoading();
+        if (otpResponse['success'] == true) {
+          isOtpVerified.value = true;
+          _showConfirmation(message: otpResponse['message']);
+        } else {
+          handleError(otpResponse['message'] ?? "OTP Verification Failed");
+        }
         return;
       }
 
+      // 2. If not an OTP reason, proceed to standard mark undelivered
       final reasonName =
           undeliveryReasons[selectedReasonIndex.value]['reason'].toString();
 
-      showLoading();
-      final token = _sessionService.token ?? "";
       final response = await _shipmentRepository.markUndelivered(
         orderId: orderId,
         reason: reasonName,
@@ -129,40 +174,22 @@ class UndeliveredController extends BaseController {
       hideLoading();
 
       if (response['success'] == false) {
-        Get.snackbar("Error",
-            response['message']?.toString() ?? "Failed to mark undelivered",
-            backgroundColor: Colors.red.shade100,
-            colorText: Colors.red.shade900);
+        handleError(response['message'] ?? "Failed to mark undelivered");
         return;
       }
 
-      _showConfirmation();
+      _showConfirmation(message: response['message']);
     } catch (e) {
       hideLoading();
-
-      // Explicitly showing a snackbar for the error to ensure it's visible,
-      // as the baseController's handleError might just log it based on its implementation.
-      Get.snackbar(
-        AppStrings.error,
-        e
-            .toString()
-            .replaceAll('Exception: ', '')
-            .replaceAll('ClientException: ', ''),
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade900,
-        duration: const Duration(seconds: 4),
-      );
-
       handleError(e);
     }
   }
 
-  void _showConfirmation() {
+  void _showConfirmation({String? message}) {
     Get.dialog(
       AlertDialog(
         title: const Text("Success"),
-        content: const Text("Order marked as undelivered successfully."),
+        content: Text(message ?? "Order marked as undelivered successfully."),
         actions: [
           TextButton(
             onPressed: () {

@@ -1,0 +1,282 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../quick_flow_controller.dart';
+import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'package:delivery_boy/core/constants/app_strings.dart';
+import 'package:delivery_boy/presentation/widgets/custom_button.dart';
+
+class DeliveryImageView extends GetView<QuickFlowController> {
+  const DeliveryImageView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(width * 0.07),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height -
+              AppBar().preferredSize.height -
+              MediaQuery.of(context).padding.top -
+              (width * 0.14),
+        ),
+        child: IntrinsicHeight(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppStrings.addImage,
+                style: TextStyle(
+                  fontSize: width * 0.06,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Add product photos as proof of delivery.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Required slots: Front + Back ─────────────────────────
+              const _SectionLabel(text: 'Required Photos', color: Colors.red),
+              const SizedBox(height: 10),
+              // ── Slots logic ──────────────────────────────────────────
+              Obx(() => Row(
+                    children: [
+                      _ImageSlot(
+                        label: 'Front',
+                        icon: Icons.photo_camera_front,
+                        file: controller.fvdImages.isNotEmpty
+                            ? controller.fvdImages[0]
+                            : null,
+                        isRequired: true,
+                        onTap: () => controller.pickFvdImage(0),
+                      ),
+                      const SizedBox(width: 12),
+                      _ImageSlot(
+                        label: 'Back',
+                        icon: Icons.crop_portrait,
+                        file: controller.fvdImages.length > 1
+                            ? controller.fvdImages[1]
+                            : null,
+                        isRequired: true,
+                        onTap: () {
+                          if (controller.fvdImages.isEmpty) {
+                            Get.snackbar(
+                                "Error", "Please add Front photo first");
+                          } else {
+                            controller.pickFvdImage(1);
+                          }
+                        },
+                      ),
+                    ],
+                  )),
+
+              const SizedBox(height: 20),
+
+              const SizedBox(height: 20),
+
+              // ── Counter badge ────────────────────────────────────────
+              Obx(() {
+                final count = controller.fvdImages.where((img) => img != null).length;
+                final requiredDone = count >= 2;
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: requiredDone
+                        ? Colors.green.shade50
+                        : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: requiredDone
+                          ? Colors.green.shade300
+                          : Colors.orange.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        requiredDone
+                            ? Icons.check_circle_rounded
+                            : Icons.camera_alt_rounded,
+                        color: requiredDone ? Colors.green : Colors.orange,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        requiredDone
+                            ? 'Required photos done ✔'
+                            : '$count / 2 required photos added',
+                        style: TextStyle(
+                          color: requiredDone
+                              ? Colors.green.shade800
+                              : Colors.orange.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 14),
+
+              // Button removed as per user request
+              const SizedBox.shrink(),
+
+              const Spacer(),
+              const SizedBox(height: 40),
+              Obx(() => CustomButton(
+                    text: AppStrings.delivered,
+                    isEnabled: controller.isFvdImageStepValid,
+                    isLoading: controller.isLoading,
+                    onPressed: controller.finishFvdDelivery,
+                    color: Colors.green,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Helper Widgets ──────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _SectionLabel({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageSlot extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final dynamic file;
+  final bool isRequired;
+  final VoidCallback onTap;
+
+  const _ImageSlot({
+    required this.label,
+    required this.icon,
+    required this.file,
+    required this.isRequired,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasImage = file != null;
+    final width = MediaQuery.of(context).size.width;
+    final slotSize = (width - width * 0.14 - 12) / 2;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: slotSize,
+        height: slotSize,
+        child: Container(
+          decoration: BoxDecoration(
+            color: hasImage ? null : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasImage
+                  ? Colors.green.shade400
+                  : isRequired
+                      ? Colors.orange.shade300
+                      : Colors.blue.shade200,
+              width: hasImage ? 2 : 1.5,
+              style: isRequired && !hasImage
+                  ? BorderStyle.solid
+                  : BorderStyle.solid,
+            ),
+            image: hasImage
+                ? DecorationImage(
+                    image: FileImage(file),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: hasImage
+              ? Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    margin: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child:
+                        const Icon(Icons.check, color: Colors.white, size: 14),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: Colors.grey.shade400, size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (isRequired)
+                      const Text(
+                        'Required',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      )
+                    else
+                      const Text(
+                        'Optional',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
