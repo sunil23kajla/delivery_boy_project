@@ -9,10 +9,12 @@ class OrderModel {
   final int? slaMinutesRemaining;
   final bool? isSlaBreached;
   final String? slaStatus;
+  final String? trackingId;
   final String? paymentMethod;
   final String? paymentStatus;
   final double? totalAmount;
   final String? createdAt;
+  final String? cancelReason;
   final String? confirmedAt;
   final String? deliveredAt;
   final CustomerModel? customer;
@@ -27,10 +29,12 @@ class OrderModel {
   final double? totalDue;
   final Map<String, dynamic>? rtData;
   final Map<String, dynamic>? rvpData;
+  final String? fulfillmentCenterName;
 
   OrderModel({
     this.id,
     this.orderNumber,
+    this.trackingId,
     this.orderStatus,
     this.orderType,
     this.deliveryType,
@@ -45,6 +49,7 @@ class OrderModel {
     this.createdAt,
     this.confirmedAt,
     this.deliveredAt,
+    this.cancelReason,
     this.customer,
     this.vendor,
     this.deliveryAddress,
@@ -57,6 +62,7 @@ class OrderModel {
     this.totalDue,
     this.rtData,
     this.rvpData,
+    this.fulfillmentCenterName,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -92,6 +98,7 @@ class OrderModel {
       isSlaBreached:
           json['sla_status'] == 'breached' || json['is_sla_breached'] == true,
       slaStatus: json['sla_status'],
+      trackingId: json['tracking_id']?.toString(),
       paymentMethod: json['payment_method'],
       paymentStatus: json['payment_status'],
       totalAmount: _parseFloatOrNum(json['total_payable'] ??
@@ -102,6 +109,7 @@ class OrderModel {
       createdAt: json['created_at'],
       confirmedAt: json['confirmed_at'],
       deliveredAt: json['delivered_at'],
+      cancelReason: json['cancel_reason']?.toString() ?? json['reason']?.toString() ?? json['remarks']?.toString(),
       customer: json['customer'] != null
           ? CustomerModel.fromJson(json['customer'])
           : fallbackCustomer,
@@ -127,6 +135,12 @@ class OrderModel {
       totalDue: _parseDouble(json['total_due']),
       rtData: (json['rt_data'] ?? json['rt']) as Map<String, dynamic>?,
       rvpData: (json['rvp_data'] ?? json['rvp']) as Map<String, dynamic>?,
+      fulfillmentCenterName: json['fulfillment_center'] != null
+          ? (json['fulfillment_center'] is Map
+                  ? json['fulfillment_center']['name']
+                  : json['fulfillment_center'])
+              ?.toString()
+          : null,
     );
   }
 
@@ -144,6 +158,7 @@ class OrderModel {
       'customer': customer?.toJson(),
       'vendor': vendor?.toJson(),
       'delivery_address': deliveryAddress?.toJson(),
+      'fulfillment_center_name': fulfillmentCenterName,
     };
   }
 
@@ -193,18 +208,69 @@ class VendorModel {
   final String? shopName;
   final String? mobileNumber;
   final String? email;
+  final String? address;
 
-  VendorModel(
-      {this.id, this.vendorName, this.shopName, this.mobileNumber, this.email});
+  VendorModel({
+    this.id,
+    this.vendorName,
+    this.shopName,
+    this.mobileNumber,
+    this.email,
+    this.address,
+  });
 
   factory VendorModel.fromJson(Map<String, dynamic> json) {
+    final rawAddress =
+        json['address'] ?? json['shop_address'] ?? json['vendor_address'];
+    String? formattedAddress;
+
+    if (rawAddress is Map<String, dynamic>) {
+      formattedAddress = _formatAddressJson(rawAddress);
+    } else {
+      formattedAddress = rawAddress?.toString();
+    }
+
     return VendorModel(
       id: json['id'],
-      vendorName: json['vendor_name'],
-      shopName: json['shop_name'],
-      mobileNumber: json['mobile_number'],
+      vendorName: json['vendor_name'] ?? json['name'],
+      shopName: json['shop_name'] ?? json['vendor_name'] ?? json['name'],
+      mobileNumber: json['mobile_number'] ?? json['mobile'],
       email: json['email'],
+      address: formattedAddress,
     );
+  }
+
+  static String _formatAddressJson(Map<String, dynamic> addressMap) {
+    String address = addressMap['address_line1'] ?? addressMap['address'] ?? '';
+    if (address.isEmpty && addressMap['landmark'] != null) {
+      address = addressMap['landmark']?.toString() ?? '';
+    }
+
+    final area = addressMap['area'];
+    if (area != null) {
+      final areaName = area is Map ? area['name'] : area.toString();
+      if (areaName != null && areaName.toString().isNotEmpty) {
+        if (address.isNotEmpty) address += ", ";
+        address += areaName.toString();
+      }
+    }
+
+    final city = addressMap['city'];
+    if (city != null) {
+      final cityName = city is Map ? city['name'] : city.toString();
+      if (cityName != null && cityName.toString().isNotEmpty) {
+        if (address.isNotEmpty) address += ", ";
+        address += cityName.toString();
+      }
+    }
+
+    if (addressMap['pincode'] != null &&
+        addressMap['pincode'].toString().isNotEmpty) {
+      if (address.isNotEmpty) address += " - ";
+      address += addressMap['pincode'].toString();
+    }
+
+    return address.isEmpty ? '' : address;
   }
 
   Map<String, dynamic> toJson() => {
@@ -213,6 +279,7 @@ class VendorModel {
         'shop_name': shopName,
         'mobile_number': mobileNumber,
         'email': email,
+        'address': address,
       };
 }
 
@@ -356,6 +423,7 @@ class PaymentModel {
   final double? amount;
   final String? transactionId;
   final String? createdAt;
+  final List<OtherChargeModel>? otherCharges;
 
   PaymentModel({
     this.id,
@@ -364,6 +432,7 @@ class PaymentModel {
     this.amount,
     this.transactionId,
     this.createdAt,
+    this.otherCharges,
   });
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
@@ -374,6 +443,39 @@ class PaymentModel {
       amount: OrderModel._parseDouble(json['amount']),
       transactionId: json['transaction_id'],
       createdAt: json['created_at'],
+      otherCharges: json['other_charges'] != null
+          ? (json['other_charges'] as List)
+              .map((o) => OtherChargeModel.fromJson(o))
+              .toList()
+          : null,
+    );
+  }
+}
+
+class OtherChargeModel {
+  final int? id;
+  final String? type;
+  final String? label;
+  final double? amount;
+  final bool? isDiscount;
+
+  OtherChargeModel({
+    this.id,
+    this.type,
+    this.label,
+    this.amount,
+    this.isDiscount,
+  });
+
+  factory OtherChargeModel.fromJson(Map<String, dynamic> json) {
+    return OtherChargeModel(
+      id: json['id'],
+      type: json['type'],
+      label: json['label'],
+      amount: OrderModel._parseDouble(json['amount']),
+      isDiscount: json['is_discount'] is bool
+          ? json['is_discount']
+          : json['is_discount'] == 1,
     );
   }
 }

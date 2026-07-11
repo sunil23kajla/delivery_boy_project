@@ -58,26 +58,30 @@ class QuickSummaryView extends GetView<QuickFlowController> {
               headingRowHeight: 45,
               dataRowHeight: 55,
               columns: const [
-                DataColumn(label: Text('Category', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                DataColumn(label: Text('Desp', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                DataColumn(label: Text('Succ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                DataColumn(label: Text('Fail', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-                DataColumn(label: Text('Rate %', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
+                DataColumn(
+                    label: Text('      ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                DataColumn(
+                    label: Text('Desp',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                DataColumn(
+                    label: Text('Succ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                DataColumn(
+                    label: Text('Fail',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
+                DataColumn(
+                    label: Text('Performance',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey))),
               ],
               rows: [
                 _buildDataRow(
-                  'Quick',
-                  (quick['count'] ?? 0).toString(),
-                  (quick['dispatch'] ?? 0).toString(),
-                  (quick['success'] ?? 0).toString(),
-                  (quick['failed'] ?? 0).toString(),
-                  '${quick['success_rate_percent'] ?? 0}%',
-                  isBold: true,
-                ),
-                _buildDataRow(
                   'All',
-                  (all['count'] ?? 0).toString(),
                   (all['dispatch'] ?? 0).toString(),
                   (all['success'] ?? 0).toString(),
                   (all['failed'] ?? 0).toString(),
@@ -92,7 +96,9 @@ class QuickSummaryView extends GetView<QuickFlowController> {
     );
   }
 
-  DataRow _buildDataRow(String category, String total, String desp, String succ, String fail, String rate, {bool isBold = false}) {
+  DataRow _buildDataRow(String category, String desp, String succ, String fail,
+      String performance,
+      {bool isBold = false}) {
     final style = TextStyle(
       fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
       fontSize: 14,
@@ -113,12 +119,6 @@ class QuickSummaryView extends GetView<QuickFlowController> {
       DataCell(Text(category, style: style)),
       DataCell(
         GestureDetector(
-          onTap: () => navigate('ALL', total),
-          child: Text(total, style: style.copyWith(color: Colors.blue.shade900, fontWeight: FontWeight.bold)),
-        ),
-      ),
-      DataCell(
-        GestureDetector(
           onTap: () => navigate('DISPATCH', desp),
           child: Text(desp, style: style.copyWith(color: Colors.blue.shade700)),
         ),
@@ -126,7 +126,8 @@ class QuickSummaryView extends GetView<QuickFlowController> {
       DataCell(
         GestureDetector(
           onTap: () => navigate('SUCCESS', succ),
-          child: Text(succ, style: style.copyWith(color: Colors.green.shade600)),
+          child:
+              Text(succ, style: style.copyWith(color: Colors.green.shade600)),
         ),
       ),
       DataCell(
@@ -135,7 +136,8 @@ class QuickSummaryView extends GetView<QuickFlowController> {
           child: Text(fail, style: style.copyWith(color: Colors.red.shade600)),
         ),
       ),
-      DataCell(Text(rate, style: style.copyWith(color: const Color(0xFF546E7A)))),
+      DataCell(Text(performance,
+          style: style.copyWith(color: const Color(0xFF546E7A)))),
     ]);
   }
 
@@ -159,48 +161,78 @@ class QuickSummaryView extends GetView<QuickFlowController> {
           const Text(
             "Collection Details",
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+              color: Color(0xFF2D3142),
+              letterSpacing: 0.3,
             ),
           ),
-          const SizedBox(height: 12),
-          const Divider(),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMetricItem("Total", "₹${data['total_collection_amount'] ?? 0}", AppColors.primary),
-              _buildMetricItem("Cash", "₹${data['cash_value'] ?? 0}", Colors.green.shade700),
-              _buildMetricItem("Online", "₹${data['online_value'] ?? 0}", Colors.orange.shade700),
-            ],
+          _buildVerticalMetricItem(
+            "Total Collection",
+            "₹${data['total_collection_amount'] ?? 0}",
+            AppColors.primary,
+            Icons.payments_outlined,
+          ),
+          const SizedBox(height: 12),
+          _buildVerticalMetricItem(
+            "Cash Collection",
+            "₹${data['cash_value'] ?? 0}",
+            Colors.green.shade600,
+            Icons.account_balance_wallet_outlined,
+          ),
+          const SizedBox(height: 12),
+          _buildVerticalMetricItem(
+            "Online Collection",
+            "₹${data['online_value'] ?? 0}",
+            Colors.indigo.shade600,
+            Icons.qr_code_scanner_outlined,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetricItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+  Widget _buildVerticalMetricItem(
+      String label, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.blueGrey.shade700,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-      ],
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

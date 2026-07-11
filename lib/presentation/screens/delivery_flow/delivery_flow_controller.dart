@@ -365,14 +365,17 @@ class DeliveryFlowController extends BaseController {
       if (!isAuto) showLoading();
       final token = _sessionService.token ?? "";
 
-      final response = await _shipmentRepository.getOrderDetails(orderId, token);
+      final response =
+          await _shipmentRepository.getOrderDetails(orderId, token);
 
       if (response['success'] == true && response['data'] != null) {
-        final status = response['data']['payment_status']?.toString().toLowerCase();
+        final status =
+            response['data']['payment_status']?.toString().toLowerCase();
         if (status == 'success' || status == 'paid') {
           isPaymentVerified.value = true;
           stopPaymentPolling();
-          if (!isAuto) Get.snackbar("Success", "Payment verified successfully!");
+          if (!isAuto)
+            Get.snackbar("Success", "Payment verified successfully!");
         } else {
           if (!isAuto) {
             handleError("Payment not yet received. Please check again.");
@@ -380,7 +383,8 @@ class DeliveryFlowController extends BaseController {
         }
       } else {
         if (!isAuto) {
-          handleError(response['message']?.toString() ?? "Payment verification failed");
+          handleError(
+              response['message']?.toString() ?? "Payment verification failed");
         }
       }
       if (!isAuto) hideLoading();
@@ -523,6 +527,17 @@ class DeliveryFlowController extends BaseController {
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16),
               ),
+              // if (isSuccess && isCod) ...[
+              //   const SizedBox(height: 15),
+              //   Text(
+              //     "Delivery Time payment Mode = ${(shipment.paymentMethod ?? 'COD').toUpperCase()}",
+              //     style: const TextStyle(
+              //       color: Colors.blue,
+              //       fontWeight: FontWeight.bold,
+              //       fontSize: 14,
+              //     ),
+              //   ),
+              // ],
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,

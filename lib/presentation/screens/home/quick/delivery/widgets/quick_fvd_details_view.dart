@@ -18,13 +18,17 @@ class QuickFvdDetailsView extends GetView<QuickFlowController> {
       final order = data['order'] as Map<String, dynamic>? ?? data ?? {};
       final customer = data['customer'] as Map<String, dynamic>? ?? {};
       final items = (data['items'] ?? order['items']) as List<dynamic>? ?? [];
-      final payment = (data['payments'] is List && (data['payments'] as List).isNotEmpty)
-          ? (data['payments'] as List)[0] as Map<String, dynamic>
-          : (data['payment'] as Map<String, dynamic>? ?? {});
+      final payment =
+          (data['payments'] is List && (data['payments'] as List).isNotEmpty)
+              ? (data['payments'] as List)[0] as Map<String, dynamic>
+              : (data['payment'] as Map<String, dynamic>? ?? {});
 
       // Robust address extraction (same as QuickDetailsScreen)
-      final addressMap = (data['delivery_address'] ?? order['delivery_address']) as Map<String, dynamic>? ?? {};
-      String displayAddress = addressMap['address_line1'] ?? addressMap['address'] ?? '';
+      final addressMap = (data['delivery_address'] ?? order['delivery_address'])
+              as Map<String, dynamic>? ??
+          {};
+      String displayAddress =
+          addressMap['address_line1'] ?? addressMap['address'] ?? '';
       if (displayAddress.isEmpty && addressMap['landmark'] != null) {
         displayAddress = addressMap['landmark'];
         if (addressMap['area'] != null && addressMap['area']['name'] != null) {
@@ -138,10 +142,11 @@ class QuickFvdDetailsView extends GetView<QuickFlowController> {
       child: Column(
         children: [
           _buildDetailRow(
-              "Tracking ID", order['order_number']?.toString() ?? "-",
+              "Tracking ID", order['tracking_id']?.toString() ?? "-",
               isBold: true),
           const Divider(height: 24),
-          _buildDetailRow("Order ID", (order['order_id'] ?? order['id'] ?? "-").toString()),
+          _buildDetailRow(
+              "Order ID", (order['order_id'] ?? order['id'] ?? "-").toString()),
         ],
       ),
     );
@@ -240,7 +245,8 @@ class QuickFvdDetailsView extends GetView<QuickFlowController> {
 
   Widget _buildItemCard(dynamic item) {
     // API uses 'product_images' and 'quantity' and 'unit_price'
-    final images = (item['product_images'] ?? item['images']) as List<dynamic>? ?? [];
+    final images =
+        (item['product_images'] ?? item['images']) as List<dynamic>? ?? [];
     final imageUrl = images.isNotEmpty ? images[0]['image_url'] : null;
 
     return Container(
@@ -287,7 +293,8 @@ class QuickFvdDetailsView extends GetView<QuickFlowController> {
               ],
             ),
           ),
-          Text('₹ ${item['unit_price'] ?? item['price'] ?? item['item_total'] ?? 0.0}',
+          Text(
+              '₹ ${item['unit_price'] ?? item['price'] ?? item['item_total'] ?? 0.0}',
               style:
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         ],
@@ -297,41 +304,105 @@ class QuickFvdDetailsView extends GetView<QuickFlowController> {
 
   Widget _buildPaymentSummary(
       Map<String, dynamic> order, Map<String, dynamic> payment) {
-    // Use controller's robust isCod logic
     final isCod = controller.isCod;
-    
-    String mode = isCod ? "COD" : "ONLINE";
-    String status = isCod ? "PENDING" : "PAID";
 
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
-        border:
-            Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
-      ),
-      child: Column(
-        children: [
-          _buildSummaryRow(
-            'Payment Mode',
-            mode.toUpperCase(),
+    // Extract other charges
+    double packagingFees = 0;
+    double platformFees = 0;
+    double otherCharges = 0;
+    double discount = 0;
+
+    final List<dynamic> charges = payment['other_charges'] ?? [];
+    for (var charge in charges) {
+      final amount = double.tryParse(charge['amount']?.toString() ?? '0') ?? 0;
+      final isDisc =
+          charge['is_discount'] == true || charge['is_discount'] == 1;
+
+      if (isDisc) {
+        discount += amount;
+      } else {
+        final type = (charge['type'] ?? "").toString().toLowerCase();
+
+        if (type.contains("packaging")) {
+          packagingFees += amount;
+        } else if (type.contains("platform")) {
+          platformFees += amount;
+        } else {
+          otherCharges += amount;
+        }
+      }
+    }
+
+    double itemsTotal = double.tryParse(order['items_total']?.toString() ??
+            order['total_amount']?.toString() ??
+            '0') ??
+        0;
+    double deliveryCharge =
+        double.tryParse(order['delivery_charge']?.toString() ?? '0') ?? 0;
+    double totalAmount = double.tryParse(order['total_payable']?.toString() ??
+            order['total_amount']?.toString() ??
+            '0') ??
+        0;
+
+    double outstanding = isCod ? totalAmount : 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          _buildSummaryRow(
-            'Payment Status',
-            status,
-            valueColor: status == 'PAID' ? Colors.green : Colors.orange,
+          child: Column(
+            children: [
+              _buildSummaryRow('Order Value =', '₹ $itemsTotal'),
+              _buildSummaryRow('Delivery charges =', '₹ $deliveryCharge'),
+              _buildSummaryRow(
+                  'Packaging & handling Fees =', '₹ $packagingFees'),
+              _buildSummaryRow('Platform Fees =', '₹ $platformFees'),
+              _buildSummaryRow('Other charges =', '₹ $otherCharges'),
+              _buildSummaryRow('Discount =', '- ₹ $discount',
+                  valueColor: Colors.red),
+              const Divider(height: 20),
+              _buildSummaryRow(
+                'Total Order amount =',
+                '₹ $totalAmount',
+                isBold: true,
+              ),
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                'Payment Mode -',
+                (payment['payment_method'] != null)
+                    ? payment['payment_method'].toString().toUpperCase()
+                    : '-',
+              ),
+              _buildSummaryRow(
+                'Payment Status -',
+                (payment['payment_status'] != null)
+                    ? payment['payment_status'].toString().toUpperCase()
+                    : '-',
+                valueColor:
+                    (payment['payment_status']?.toString().toLowerCase() ==
+                            'paid')
+                        ? Colors.green
+                        : (payment['payment_status'] != null
+                            ? Colors.orange
+                            : Colors.blueGrey),
+              ),
+              const Divider(height: 20),
+              _buildSummaryRow(
+                'Outstanding Amount =',
+                '₹ $outstanding',
+                isBold: true,
+                valueColor: outstanding > 0 ? Colors.red : Colors.green,
+              ),
+            ],
           ),
-          const Divider(height: 25, thickness: 1),
-          _buildSummaryRow(
-            'Total Amount',
-            '₹ ${order['total_amount'] ?? payment['total_amount'] ?? '0.00'}',
-            isBold: true,
-            fontSize: 20,
-            valueColor: AppColors.primary,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

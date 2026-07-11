@@ -37,6 +37,20 @@ class RtOtpView extends GetView<RtFlowController> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.send_rounded,
+                      size: 16, color: AppColors.primary),
+                  label: const Text(
+                    "SEND OTP",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 30),
                 const Text(
                   "TO VIEW THE OTP, CLICK ON THIS ORDER IN THE MY ORDER SECTION OF THE CUSTOMER MOB. APPLICATION AND VIEW THE OTP",

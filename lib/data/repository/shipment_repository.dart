@@ -837,18 +837,27 @@ class ShipmentRepository {
     );
   }
 
+  Future<dynamic> getQuickReturnToFailedReasons({
+    required String token,
+  }) async {
+    return await apiClient.get(
+      AppConstants.quickReturnToFailedReasonsEndpoint,
+      token: token,
+    );
+  }
+
   Future<dynamic> submitQuickCustomerCancel({
     required String orderId,
     required String cancelReasonId,
-    String? reasonDetails,
+    required String reasonDetails,
     required String token,
   }) async {
-    return await apiClient.postMultipart(
+    return await apiClient.post(
       AppConstants.quickCustomerCancelEndpoint,
-      fields: {
+      body: {
         'order_id': orderId,
         'cancel_reason_id': cancelReasonId,
-        'reason_details': reasonDetails ?? '',
+        'reason_details': reasonDetails,
       },
       token: token,
     );
@@ -858,9 +867,54 @@ class ShipmentRepository {
     required String orderId,
     required String token,
   }) async {
-    return await apiClient.postMultipart(
+    return await apiClient.post(
       AppConstants.quickCustomerCancelSendOtpEndpoint,
-      fields: {'order_id': orderId},
+      body: {'order_id': orderId},
+      token: token,
+    );
+  }
+
+  Future<dynamic> submitQuickReturnToFailed({
+    required String orderId,
+    required String cancelReasonId,
+    String? reasonDetails,
+    required String token,
+  }) async {
+    return await apiClient.postMultipart(
+      AppConstants.quickReturnToFailedEndpoint,
+      fields: {
+        'order_id': orderId,
+        'cancel_reason_id': cancelReasonId,
+        'reason_details': reasonDetails ?? '',
+      },
+      token: token,
+    );
+  }
+
+  Future<dynamic> sendQuickReturnToFailedOtp({
+    required String orderId,
+    required String token,
+  }) async {
+    return await apiClient.postMultipart(
+      AppConstants.quickReturnToFailedSendOtpEndpoint,
+      fields: {
+        'order_id': orderId,
+      },
+      token: token,
+    );
+  }
+
+  Future<dynamic> verifyQuickReturnToFailedOtp({
+    required String orderId,
+    required String otp,
+    required String token,
+  }) async {
+    return await apiClient.postMultipart(
+      AppConstants.quickReturnToFailedVerifyOtpEndpoint,
+      fields: {
+        'order_id': orderId,
+        'otp': otp,
+      },
       token: token,
     );
   }
@@ -870,9 +924,9 @@ class ShipmentRepository {
     required String otp,
     required String token,
   }) async {
-    return await apiClient.postMultipart(
+    return await apiClient.post(
       AppConstants.quickCustomerCancelVerifyOtpEndpoint,
-      fields: {
+      body: {
         'order_id': orderId,
         'otp': otp,
       },
@@ -975,7 +1029,7 @@ class ShipmentRepository {
     String? recipientName,
     String? recipientMobile,
     String? notes,
-    required String orderType,
+    String? orderType,
     required String token,
   }) async {
     final endpoint =
@@ -986,7 +1040,7 @@ class ShipmentRepository {
         'recipient_name': recipientName ?? "",
         'recipient_mobile': recipientMobile ?? "",
         'notes': notes ?? "",
-        'order_type': orderType,
+        'order_type': "",
       },
       token: token,
     );
@@ -1042,6 +1096,64 @@ class ShipmentRepository {
   }) async {
     return await apiClient.get(
       "${AppConstants.quickOrdersListByCountEndpoint}?metric=$metric&page=$page",
+      token: token,
+    );
+  }
+
+  Future<dynamic> sendQuickReturnToSellerOtp({
+    required String orderId,
+    required String token,
+  }) async {
+    return await apiClient.post(
+      AppConstants.quickReturnToSellerSendOtpEndpoint,
+      body: {'order_id': orderId},
+      token: token,
+    );
+  }
+
+  Future<dynamic> verifyQuickReturnToSellerOtp({
+    required String orderId,
+    required String otp,
+    required String token,
+  }) async {
+    return await apiClient.post(
+      AppConstants.quickReturnToSellerVerifyOtpEndpoint,
+      body: {'order_id': orderId, 'otp': otp},
+      token: token,
+    );
+  }
+
+  Future<dynamic> submitQuickReturnToSellerDetails({
+    required String orderId,
+    required String name,
+    required String mobile,
+    required String token,
+  }) async {
+    return await apiClient.post(
+      AppConstants.quickReturnToSellerDetailsEndpoint,
+      body: {
+        'order_id': orderId,
+        'seller_name': name,
+        'seller_mobile': mobile,
+      },
+      token: token,
+    );
+  }
+
+  Future<dynamic> uploadQuickReturnToSellerImages({
+    required String orderId,
+    required List<File> photos,
+    required String token,
+  }) async {
+    final List<MapEntry<String, File>> files = photos
+        .where((f) => f.existsSync())
+        .map((f) => MapEntry('images[]', f))
+        .toList();
+
+    return await apiClient.postMultipart(
+      AppConstants.quickReturnToSellerImagesEndpoint,
+      fields: {'order_id': orderId},
+      files: files,
       token: token,
     );
   }

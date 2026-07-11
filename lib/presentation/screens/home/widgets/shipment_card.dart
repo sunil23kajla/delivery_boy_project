@@ -159,7 +159,7 @@ class ShipmentCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    forcedStatus ?? uiOrderType,
+                    forcedStatus != null ? '$category - $forcedStatus' : uiOrderType,
                     style: TextStyle(
                       color: forcedColor ?? catColor,
                       fontWeight: FontWeight.bold,
@@ -216,36 +216,15 @@ class ShipmentCard extends StatelessWidget {
                               color: AppColors.textSecondary, fontSize: 11),
                         ),
                         const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                paymentMethod,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                  fontSize: 13,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            if (isCod && totalAmount != null)
-                              _Badge(
-                                label: '₹ $totalAmount',
-                                bg: Colors.green.shade50,
-                                border: Colors.green.shade200,
-                                textColor: Colors.green.shade700,
-                              )
-                            else
-                              _Badge(
-                                label: paymentStatus,
-                                bg: Colors.blue.shade50,
-                                border: Colors.blue.shade200,
-                                textColor: Colors.blue,
-                              ),
-                          ],
+                        Text(
+                          isCod ? 'COD : ₹${totalAmount ?? 0}' : 'Prepaid : Paid',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ],
                     ),

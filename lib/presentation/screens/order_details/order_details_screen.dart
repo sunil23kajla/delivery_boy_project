@@ -179,44 +179,101 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
               ],
             ),
           ),
-          Text('₹ ${item.itemTotal ?? 0.0}',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
   Widget _buildPaymentSummary(OrderModel shipment) {
-    final status = (shipment.paymentStatus ?? 'Paid').toUpperCase();
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
-        border:
-            Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
-      ),
-      child: Column(
-        children: [
-          _buildSummaryRow(
-            'Payment Mode',
-            (shipment.paymentMethod ?? 'Online').toUpperCase(),
+    final isCod = (shipment.paymentMethod?.toLowerCase() == 'cod');
+
+    // Extract other charges using robust logic similar to summary screen
+    double packagingFees = 0.0;
+    double platformFees = 0.0;
+    double otherCharges = 0.0;
+    double discount = 0.0;
+
+    final allOtherCharges =
+        shipment.payments?.expand((p) => p.otherCharges ?? []).toList() ?? [];
+
+    for (var charge in allOtherCharges) {
+      if (charge.isDiscount == true) {
+        discount += (charge.amount ?? 0.0);
+      } else if (charge.type == 'packaging') {
+        packagingFees += (charge.amount ?? 0.0);
+      } else if (charge.type == 'platform') {
+        platformFees += (charge.amount ?? 0.0);
+      } else {
+        otherCharges += (charge.amount ?? 0.0);
+      }
+    }
+
+    double itemsTotal = shipment.itemsTotal ?? 0;
+    double deliveryCharge = shipment.deliveryCharge ?? 0;
+    double totalAmount = shipment.totalPayable ?? 0;
+    double outstanding = isCod ? totalAmount : 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          _buildSummaryRow(
-            'Payment Status',
-            status,
-            valueColor: _getStatusColor(shipment.paymentStatus),
+          child: Column(
+            children: [
+              _buildSummaryRow(
+                'Payment Mode =',
+                isCod ? 'COD' : 'Prepaid',
+              ),
+              _buildSummaryRow(
+                'Order Amount =',
+                isCod ? '₹ $totalAmount' : 'Paid',
+              ),
+              /*
+              _buildSummaryRow('Order Value =', '₹ $itemsTotal'),
+              _buildSummaryRow('Delivery charges =', '₹ $deliveryCharge'),
+              _buildSummaryRow(
+                  'Packaging & handling Fees =', '₹ $packagingFees'),
+              _buildSummaryRow('Platform Fees =', '₹ $platformFees'),
+              _buildSummaryRow('Other charges =', '₹ $otherCharges'),
+              _buildSummaryRow('Discount =', '- ₹ $discount',
+                  valueColor: Colors.red),
+              const Divider(height: 20),
+              _buildSummaryRow(
+                'Total Order amount =',
+                '₹ $totalAmount',
+                isBold: true,
+              ),
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                'Payment Mode -',
+                (shipment.paymentMethod != null)
+                    ? shipment.paymentMethod!.toUpperCase()
+                    : '-',
+              ),
+              _buildSummaryRow(
+                'Payment Status -',
+                (shipment.paymentStatus != null)
+                    ? shipment.paymentStatus!.toUpperCase()
+                    : '-',
+                valueColor: _getStatusColor(shipment.paymentStatus),
+              ),
+              const Divider(height: 20),
+              _buildSummaryRow(
+                'Total Outs Amount =',
+                '₹ $outstanding',
+                isBold: true,
+                valueColor: outstanding > 0 ? Colors.red : Colors.green,
+              ),
+              */
+            ],
           ),
-          const Divider(height: 25, thickness: 1),
-          _buildSummaryRow(
-            'Total Amount',
-            '₹ ${shipment.totalAmount ?? 0.0}',
-            isBold: true,
-            fontSize: 20,
-            valueColor: AppColors.primary,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

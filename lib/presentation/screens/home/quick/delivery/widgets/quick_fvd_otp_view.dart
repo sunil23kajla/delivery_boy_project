@@ -59,6 +59,22 @@ class DeliveryOtpView extends GetView<QuickFlowController> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.send_rounded,
+                        size: 16, color: AppColors.primary),
+                    label: const Text(
+                      "SEND OTP",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 30),
                 Obx(() => controller.isFvdOtpVerified.value
                     ? Center(

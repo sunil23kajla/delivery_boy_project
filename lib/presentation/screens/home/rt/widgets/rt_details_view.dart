@@ -1,4 +1,5 @@
 import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../../core/utils/external_actions.dart';
@@ -23,8 +24,15 @@ class RtDetailsView extends GetView<RtFlowController> {
                 _buildIdentifiersCard(),
                 const SizedBox(height: 15),
 
-                // Section 2: Product Highlight Card
-                _buildProductHighlightCard(),
+                // Section 2: Dynamic Purple Product Highlight Cards
+                Obx(() => Column(
+                      children: controller.orderItems.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildPurpleProductCard(item),
+                        );
+                      }).toList(),
+                    )),
                 const SizedBox(height: 15),
 
                 // Section 3: Customer/Recipient Card
@@ -36,6 +44,91 @@ class RtDetailsView extends GetView<RtFlowController> {
         ),
         _buildFooter(width),
       ],
+    );
+  }
+
+  Widget _buildPurpleProductCard(OrderItemModel item) {
+    final imageUrl = (item.productImages != null && item.productImages!.isNotEmpty)
+        ? item.productImages!.first.imageUrl
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.purple.shade300, Colors.purple.shade200],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.purple.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 8))
+        ],
+      ),
+      child: Row(
+        children: [
+          // Left: Image Section
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(15),
+              image: imageUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: imageUrl == null
+                ? const Icon(Icons.shopping_bag, color: Colors.white, size: 30)
+                : null,
+          ),
+          const SizedBox(width: 15),
+          // Right: Content Section
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "PRODUCT TO RETURN",
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.productName ?? "Product Details",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1.2,
+                  ),
+                ),
+                if (item.quantity != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      "Qty: ${item.quantity}",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white60,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -141,76 +234,15 @@ class RtDetailsView extends GetView<RtFlowController> {
               offset: const Offset(0, 4))
         ],
       ),
-      child: Column(
-        children: [
-          _buildInfoItem(Icons.qr_code, "TRACKING ID",
-              controller.shipment['barcode']?.toString() ?? "-------"),
-          const SizedBox(height: 12),
-          _buildInfoItem(Icons.numbers, "ORDER ID",
-              controller.shipment['orderId']?.toString() ?? "-------"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductHighlightCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple.shade300, Colors.purple.shade200],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.purple.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 8))
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child:
-                const Icon(Icons.shopping_bag, color: Colors.white, size: 30),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "PRODUCT TO RETURN",
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white70,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Obx(() => Text(
-                      controller.shipment['product']?.toString() ?? "-------",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.2,
-                      ),
-                    )),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: Obx(() => Column(
+            children: [
+              _buildInfoItem(Icons.qr_code, "TRACKING ID",
+                  controller.shipment['barcode']?.toString() ?? "-------"),
+              const SizedBox(height: 12),
+              _buildInfoItem(Icons.numbers, "ORDER ID",
+                  controller.shipment['orderId']?.toString() ?? "-------"),
+            ],
+          )),
     );
   }
 

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:delivery_boy/core/constants/app_routes.dart';
 import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 import 'package:delivery_boy/data/repository/shipment_repository.dart';
 import 'package:delivery_boy/presentation/controllers/base_controller.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +39,7 @@ class FmFlowController extends BaseController {
   // --- Success Flow State ---
 
   // Details
-  var product = "".obs;
+  var orderItems = <OrderItemModel>[].obs;
   var phone = "".obs;
   var lat = 0.0.obs;
   var lng = 0.0.obs;
@@ -74,21 +75,20 @@ class FmFlowController extends BaseController {
     _fetchQuestions();
 
     final args = Get.arguments;
-    if (args != null && args.runtimeType.toString() == 'OrderModel') {
+    if (args is OrderModel) {
       final order = args;
       shipment = {
         'id': order.id,
-        'orderId': order.orderNumber ?? order.id?.toString(),
-        'barcode': order.orderNumber,
+        'orderId': order.id?.toString() ?? "-------",
+        'barcode': order.trackingId?.toString() ?? "-------",
         'name': order.vendor?.vendorName ??
             order.vendor?.shopName ??
             order.customer?.name,
         'address': order.deliveryAddress?.addressLine1 ?? 'Pickup Address N/A',
       };
-      // Extract specific details
-      product.value = order.items?.isNotEmpty == true
-          ? order.items!.first.productName ?? 'Product'
-          : 'Product';
+      // Extract all items for vertical listing
+      orderItems.assignAll(order.items ?? []);
+
       phone.value = order.vendor?.mobileNumber ?? order.customer?.mobile ?? '';
       lat.value = order.deliveryAddress?.latitude ?? 0.0;
       lng.value = order.deliveryAddress?.longitude ?? 0.0;
@@ -105,7 +105,7 @@ class FmFlowController extends BaseController {
     if (shipment['address'] == null) {
       shipment['address'] = "Industrial Area, Phase 2, Delhi";
     }
-    if (product.value.isEmpty) product.value = "Fragile Electronics Kit";
+    // if (product.value.isEmpty) product.value = "Fragile Electronics Kit";
     if (phone.value.isEmpty) phone.value = "9876543210";
     if (lat.value == 0.0) {
       lat.value = 28.6139; // Delhi Lat

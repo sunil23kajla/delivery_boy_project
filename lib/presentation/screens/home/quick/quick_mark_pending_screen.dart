@@ -24,58 +24,58 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
         isLoading: controller.isLoadingRx,
         child: Scaffold(
           backgroundColor: Colors.white,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: Obx(() {
-            final bool isPickup = !controller.isDeliveryUndelivered.value;
-            final String title = isPickup ? "Mark Pending" : "Mark Undelivered";
-            final Color bgColor = isPickup ? AppColors.primary : Colors.white;
-            final Color textColor = isPickup ? Colors.white : Colors.black;
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(kToolbarHeight),
+            child: Obx(() {
+              final bool isPickup = !controller.isDeliveryUndelivered.value;
+              final String title =
+                  isPickup ? "Mark Pending" : "Mark Undelivered";
+              final Color bgColor = isPickup ? AppColors.primary : Colors.white;
+              final Color textColor = isPickup ? Colors.white : Colors.black;
 
-            return AppBar(
-              title: Text(title,
-                  style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold)),
-              backgroundColor: bgColor,
-              elevation: 0,
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back, color: textColor),
-                onPressed: () => controller.previousMarkPendingStep(),
-              ),
-            );
+              return AppBar(
+                title: Text(title,
+                    style: TextStyle(
+                        color: textColor, fontWeight: FontWeight.bold)),
+                backgroundColor: bgColor,
+                elevation: 0,
+                leading: IconButton(
+                  icon: Icon(Icons.arrow_back, color: textColor),
+                  onPressed: () => controller.previousMarkPendingStep(),
+                ),
+              );
+            }),
+          ),
+          body: Obx(() {
+            switch (controller.currentStep.value) {
+              case QuickStep.markPendingReason:
+                return _buildReasonSelection();
+              case QuickStep.markPendingOtp:
+                return _buildOtpVerification(context);
+              case QuickStep.markPendingPreOtp:
+                return _buildPreOtpView(context);
+              case QuickStep.markPendingComment:
+                return _buildCommentInput(context);
+              case QuickStep.markPendingRTDetails:
+                return _buildRTDetailsView(context);
+              case QuickStep.markPendingRTOtp:
+                return _buildRTOtpView(context);
+              case QuickStep.markPendingRTImages:
+                return _buildRTEvidenceView(context);
+              case QuickStep.markPendingCustomerCancelOtp:
+                return _buildCustomerCancelOtpView(context);
+              case QuickStep.markPendingCustomerCancelReasons:
+                return _buildCustomerCancelReasonsView(context);
+              case QuickStep.markPendingCustomerCancelDetails:
+                return _buildCustomerCancelDetailsView(context);
+              case QuickStep.markPendingCustomerCancelImages:
+                return _buildCustomerCancelImagesView(context);
+              default:
+                return const Center(child: CircularProgressIndicator());
+            }
           }),
+          bottomNavigationBar: const SizedBox.shrink(),
         ),
-        body: Obx(() {
-          switch (controller.currentStep.value) {
-            case QuickStep.markPendingReason:
-              return _buildReasonSelection();
-            case QuickStep.markPendingOtp:
-              return _buildOtpVerification(context);
-            case QuickStep.markPendingPreOtp:
-              return _buildPreOtpView(context);
-            case QuickStep.markPendingComment:
-              return _buildCommentInput(context);
-            case QuickStep.markPendingRTDetails:
-              return _buildRTDetailsView(context);
-            case QuickStep.markPendingRTOtp:
-              return _buildRTOtpView(context);
-            case QuickStep.markPendingRTImages:
-              return _buildRTEvidenceView(context);
-            case QuickStep.markPendingCustomerCancelOtp:
-              return _buildCustomerCancelOtpView(context);
-            case QuickStep.markPendingCustomerCancelReasons:
-              return _buildCustomerCancelReasonsView(context);
-            case QuickStep.markPendingCustomerCancelDetails:
-              return _buildCustomerCancelDetailsView(context);
-            case QuickStep.markPendingCustomerCancelImages:
-              return _buildCustomerCancelImagesView(context);
-            default:
-              return const Center(child: CircularProgressIndicator());
-          }
-        }),
-        bottomNavigationBar: const SizedBox.shrink(),
-      ),
       ),
     );
   }
@@ -142,6 +142,21 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.send_rounded,
+                      size: 16, color: AppColors.primary),
+                  label: const Text(
+                    "SEND OTP",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 const SizedBox(height: 30),
                 const Text(
                   "PLEASE ENTER THE 4-DIGIT OTP PROVIDED BY THE CUSTOMER TO PROCEED WITH CANCELLATION",
@@ -188,6 +203,21 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.send_rounded,
+                      size: 16, color: AppColors.primary),
+                  label: const Text(
+                    "SEND OTP",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 const SizedBox(height: 30),
                 const Text(
                   "TO VIEW THE OTP, CLICK ON THIS ORDER IN THE MY ORDER SECTION OF THE CUSTOMER MOB. APPLICATION AND VIEW THE OTP",
@@ -304,7 +334,7 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
       child: Column(
         children: [
           _buildRTInfoItem(Icons.qr_code, "TRACKING ID",
-              order['order_number']?.toString() ?? "-------"),
+              order['tracking_id']?.toString() ?? "-------"),
           const SizedBox(height: 12),
           _buildRTInfoItem(Icons.numbers, "ORDER ID",
               order['order_id']?.toString() ?? "-------"),
@@ -549,20 +579,19 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
               final isOtpValid = isPreOtp
                   ? controller.pendingPreOtpText.value.length == 4
                   : controller.pendingOtpText.value.length == 4;
-              final areImagesDone =
-                  controller.pendingRTImages[0] != null &&
-                      controller.pendingRTImages[1] != null;
+              final areImagesDone = controller.pendingRTImages[0] != null &&
+                  controller.pendingRTImages[1] != null;
 
               bool canPress = true;
               if ((isOtp || isPreOtp) && !isOtpValid) canPress = false;
               if (isEvidence && !areImagesDone) canPress = false;
 
-              final isComment = controller.currentStep.value == QuickStep.markPendingComment;
+              final isComment =
+                  controller.currentStep.value == QuickStep.markPendingComment;
 
               return ElevatedButton(
-                onPressed: canPress
-                    ? () => controller.nextMarkPendingStep()
-                    : null,
+                onPressed:
+                    canPress ? () => controller.nextMarkPendingStep() : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       isEvidence ? Colors.green : AppColors.primary,
@@ -683,41 +712,43 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
         ),
         Expanded(
           child: Obx(() => ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            itemCount: controller.pendingReasons.length,
-            itemBuilder: (context, index) {
-              final reason = controller.pendingReasons[index];
-              final String name =
-                  (reason['name'] ?? reason['reason'] ?? "Unknown Reason")
-                      .toString()
-                      .toUpperCase();
-              final String reasonId = reason['id'].toString();
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                itemCount: controller.pendingReasons.length,
+                itemBuilder: (context, index) {
+                  final reason = controller.pendingReasons[index];
+                  final String name =
+                      (reason['name'] ?? reason['reason'] ?? "Unknown Reason")
+                          .toString()
+                          .toUpperCase();
+                  final String reasonId = reason['id'].toString();
 
-              return Obx(() {
-                final bool isSelected =
-                    controller.selectedPendingReasonId.value == reasonId;
-                return RadioListTile<String>(
-                  title: Text(name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w600,
-                        color: isSelected ? AppColors.primary : Colors.black87,
-                      )),
-                  value: reasonId,
-                  groupValue: controller.selectedPendingReasonId.value,
-                  onChanged: (val) {
-                    if (val != null) {
-                      controller.selectMarkPendingReason(reason);
-                    }
-                  },
-                  activeColor: AppColors.primary,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                );
-              });
-            },
-          )),
+                  return Obx(() {
+                    final bool isSelected =
+                        controller.selectedPendingReasonId.value == reasonId;
+                    return RadioListTile<String>(
+                      title: Text(name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w600,
+                            color:
+                                isSelected ? AppColors.primary : Colors.black87,
+                          )),
+                      value: reasonId,
+                      groupValue: controller.selectedPendingReasonId.value,
+                      onChanged: (val) {
+                        if (val != null) {
+                          controller.selectMarkPendingReason(reason);
+                        }
+                      },
+                      activeColor: AppColors.primary,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 10),
+                    );
+                  });
+                },
+              )),
         ),
         _buildRTFooter(MediaQuery.of(Get.context!).size.width),
       ],
@@ -741,18 +772,18 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                 Obx(() => Column(
                       children: controller.customerCancelReasons.map((reason) {
                         final id = reason['id'].toString();
-                        final name =
-                            (reason['reason'] ?? reason['name'] ?? "").toString();
+                        final name = (reason['reason'] ?? reason['name'] ?? "")
+                            .toString();
                         return Obx(() => RadioListTile<String>(
                               title: Text(name.toUpperCase(),
                                   style: const TextStyle(fontSize: 14)),
                               value: id,
-                              groupValue:
-                                  controller.selectedCustomerCancelReasonId.value,
+                              groupValue: controller
+                                  .selectedCustomerCancelReasonId.value,
                               onChanged: (val) {
                                 if (val != null) {
-                                  controller.selectedCustomerCancelReasonId.value =
-                                      val;
+                                  controller.selectedCustomerCancelReasonId
+                                      .value = val;
                                 }
                               },
                               activeColor: AppColors.primary,
@@ -783,8 +814,10 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 15),
-                const Text("PLEASE PROVIDE MORE INFORMATION ABOUT THE CANCELLATION",
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                const Text(
+                    "PLEASE PROVIDE MORE INFORMATION ABOUT THE CANCELLATION",
+                    style: TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary)),
                 const SizedBox(height: 20),
                 TextField(
                   controller: controller.customerCancelCommentController,
@@ -799,7 +832,8 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      borderSide:
+                          const BorderSide(color: AppColors.primary, width: 2),
                     ),
                   ),
                 ),
@@ -829,7 +863,8 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                 Pinput(
                   length: 4,
                   controller: controller.customerCancelOtpController,
-                  onChanged: (val) => controller.customerCancelOtpText.value = val,
+                  onChanged: (val) =>
+                      controller.customerCancelOtpText.value = val,
                   defaultPinTheme: PinTheme(
                     width: 55,
                     height: 60,
@@ -841,6 +876,21 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.send_rounded,
+                      size: 16, color: AppColors.primary),
+                  label: const Text(
+                    "SEND OTP",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 const SizedBox(height: 30),
                 const Text(
                   "PLEASE ENTER THE 4-DIGIT OTP PROVIDED BY THE CUSTOMER TO PROCEED WITH CANCELLATION",
@@ -872,7 +922,8 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 const SizedBox(height: 10),
                 const Text("PLEASE UPLOAD IMAGES FOR CANCELLATION PROOF",
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    style: TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary)),
                 const SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -896,9 +947,11 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
         Obx(() => InkWell(
               onTap: () async {
                 final picker = ImagePicker();
-                final pickedFile = await picker.pickImage(source: ImageSource.camera);
+                final pickedFile =
+                    await picker.pickImage(source: ImageSource.camera);
                 if (pickedFile != null) {
-                  controller.customerCancelImages[index] = File(pickedFile.path);
+                  controller.customerCancelImages[index] =
+                      File(pickedFile.path);
                 }
               },
               child: Container(
@@ -912,10 +965,12 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                 child: controller.customerCancelImages[index] != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(14),
-                        child: Image.file(controller.customerCancelImages[index]!,
+                        child: Image.file(
+                            controller.customerCancelImages[index]!,
                             fit: BoxFit.cover),
                       )
-                    : const Icon(Icons.camera_alt, color: AppColors.primary, size: 40),
+                    : const Icon(Icons.camera_alt,
+                        color: AppColors.primary, size: 40),
               ),
             )),
         const SizedBox(height: 10),
@@ -929,7 +984,10 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
   }
 
   Widget _buildCustomerCancelFooter(double width,
-      {bool isOtp = false, bool isReasons = false, bool isDetails = false, bool isImages = false}) {
+      {bool isOtp = false,
+      bool isReasons = false,
+      bool isDetails = false,
+      bool isImages = false}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.white, boxShadow: [
@@ -960,13 +1018,20 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
           Expanded(
             child: Obx(() {
               bool canPress = true;
-              if (isOtp && controller.customerCancelOtpText.value.length != 4) canPress = false;
-              if (isReasons && controller.selectedCustomerCancelReasonId.value.isEmpty) canPress = false;
+              if (isOtp && controller.customerCancelOtpText.value.length != 4)
+                canPress = false;
+              if (isReasons &&
+                  controller.selectedCustomerCancelReasonId.value.isEmpty)
+                canPress = false;
               // Details (Description) is optional - removed canPress = false check
-              if (isImages && (controller.customerCancelImages[0] == null || controller.customerCancelImages[1] == null)) canPress = false;
+              if (isImages &&
+                  (controller.customerCancelImages[0] == null ||
+                      controller.customerCancelImages[1] == null))
+                canPress = false;
 
               return ElevatedButton(
-                onPressed: canPress ? () => controller.nextMarkPendingStep() : null,
+                onPressed:
+                    canPress ? () => controller.nextMarkPendingStep() : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isImages ? Colors.green : AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 15),
@@ -1014,7 +1079,8 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                 const SizedBox(height: 30),
                 const Text("VERIFY OTP",
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 15),
                 Center(
                   child: Pinput(
@@ -1024,11 +1090,27 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                     defaultPinTheme: PinTheme(
                       width: 45,
                       height: 50,
-                      textStyle:
-                          const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      textStyle: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.send_rounded,
+                        size: 16, color: AppColors.primary),
+                    label: const Text(
+                      "SEND OTP",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
                   ),
@@ -1038,7 +1120,8 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                   child: Text(
                     "Please enter the 4-digit OTP provided by the party",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    style:
+                        TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                 ),
               ],
@@ -1049,7 +1132,6 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
       ],
     );
   }
-
 
   Widget _buildCommentInput(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -1072,7 +1154,8 @@ class QuickMarkPendingScreen extends GetView<QuickFlowController> {
                 const SizedBox(height: 30),
                 const Text("REASON DETAILS",
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 10),
                 TextField(
                   controller: controller.pendingCommentController,

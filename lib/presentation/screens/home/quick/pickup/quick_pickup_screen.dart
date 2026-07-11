@@ -46,7 +46,8 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
     final order = data; // Root has tracking_id, order_id, etc.
     final vendor = data['vendor'] as Map<String, dynamic>? ?? {};
     // Match the JSON structure (items instead of order_items)
-    final items = (data['items'] ?? data['order_items']) as List<dynamic>? ?? [];
+    final items =
+        (data['items'] ?? data['order_items']) as List<dynamic>? ?? [];
     final payment = data['payment'] as Map<String, dynamic>? ?? {};
     final questions = data['verification_questions'] as List? ?? [];
 
@@ -68,9 +69,16 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
           const SizedBox(height: 8),
           _buildAddressCard(
             title: "SELLER DETAILS",
-            name: vendor['name'] ?? vendor['shop_name'] ?? vendor['vendor_name'] ?? '-',
-            address: vendor['address'] ?? vendor['shop_address'] ?? '-',
-            mobile: vendor['mobile'] ?? vendor['mobile_number'] ?? vendor['vendor_mobile'] ?? '-',
+            name: vendor['vendor_name'] ??
+                vendor['shop_name'] ??
+                vendor['name'] ??
+                '-',
+            address: _formatAddress(
+                vendor['address'] is Map ? vendor['address'] : vendor),
+            mobile: vendor['mobile_number'] ??
+                vendor['mobile'] ??
+                vendor['vendor_mobile'] ??
+                '-',
             icon: Icons.store_outlined,
           ),
           const SizedBox(height: 16),
@@ -198,7 +206,8 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
       ),
       child: Column(
         children: [
-          _buildDetailRow("Tracking ID", order['order_number']?.toString() ?? '-',
+          _buildDetailRow(
+              "Tracking ID", order['tracking_id']?.toString() ?? '-',
               isBold: true),
           const Divider(height: 24),
           _buildDetailRow(
@@ -273,7 +282,8 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
 
   Widget _buildItemCard(dynamic item) {
     // Correct mapping for product images from API JSON
-    final images = (item['product_images'] ?? item['images']) as List<dynamic>? ?? [];
+    final images =
+        (item['product_images'] ?? item['images']) as List<dynamic>? ?? [];
     final imageUrl = images.isNotEmpty ? images[0]['image_url'] : null;
 
     return Container(
@@ -322,7 +332,8 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
             ),
           ),
           // Correct mapping for unit price
-          Text('₹ ${item['unit_price'] ?? item['price'] ?? item['item_total'] ?? 0.0}',
+          Text(
+              '₹ ${item['unit_price'] ?? item['price'] ?? item['item_total'] ?? 0.0}',
               style:
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         ],
@@ -332,48 +343,151 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
 
   Widget _buildPaymentSummary(
       Map<String, dynamic> order, Map<String, dynamic> payment) {
-    // Sync with Home Page Payment Logic
-    final homeOrder = controller.selectedOrder.value ?? {};
-    final apiStatus = (homeOrder['payment_status'] ?? '').toString().toLowerCase();
-    
-    String mode = "COD";
-    String status = "PENDING";
-    
-    if (apiStatus == 'paid') {
-      mode = "ONLINE";
-      status = "PAID";
+    final isCod = controller.isCod;
+
+    // Extract other charges from payment object
+    double packagingFees = 0;
+    double platformFees = 0;
+    double otherCharges = 0;
+    double discount = 0;
+
+    final List<dynamic> charges = payment['other_charges'] ?? [];
+    for (var charge in charges) {
+      final amount = double.tryParse(charge['amount']?.toString() ?? '0') ?? 0;
+      final isDisc =
+          charge['is_discount'] == true || charge['is_discount'] == 1;
+
+      if (isDisc) {
+        discount += amount;
+      } else {
+        final type = (charge['type'] ?? "").toString().toLowerCase();
+
+        if (type.contains("packaging")) {
+          packagingFees += amount;
+        } else if (type.contains("platform")) {
+          platformFees += amount;
+        } else {
+          otherCharges += amount;
+        }
+      }
     }
+
+    // Extraction with fallbacks for this specific API structure
+    double totalAmount = double.tryParse(payment['total_amount']?.toString() ??
+            payment['amount']?.toString() ??
+            order['total_payable']?.toString() ??
+            order['total_amount']?.toString() ??
+            '0') ??
+        0;
+
+    double deliveryCharge = double.tryParse(
+            payment['delivery_charge']?.toString() ??
+                order['delivery_charge']?.toString() ??
+                '0') ??
+        0;
+
+    // If items_total is missing, calculate it as (total - delivery - other charges + discount)
+    double itemsTotal = double.tryParse(order['items_total']?.toString() ??
+            order['order_items_total']?.toString() ??
+            '') ??
+        (totalAmount - deliveryCharge - packagingFees - platformFees - otherCharges + discount);
+
+    double outstanding = isCod ? totalAmount : 0;
 
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border:
-            Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         children: [
+          _buildSummaryRow('Order Value =', '₹ $itemsTotal'),
+          _buildSummaryRow('Delivery charges =', '₹ $deliveryCharge'),
+          _buildSummaryRow('Packaging & handling Fees =', '₹ $packagingFees'),
+          _buildSummaryRow('Platform Fees =', '₹ $platformFees'),
+          _buildSummaryRow('Other charges =', '₹ $otherCharges'),
+          _buildSummaryRow('Discount =', '- ₹ $discount',
+              valueColor: Colors.red),
+          const Divider(height: 20),
           _buildSummaryRow(
-            'Payment Mode',
-            mode.toUpperCase(),
-          ),
-          _buildSummaryRow(
-            'Payment Status',
-            status,
-            valueColor: status == 'PAID' ? Colors.green : Colors.orange,
-          ),
-          const Divider(height: 25, thickness: 1),
-          _buildSummaryRow(
-            'Total Amount',
-            '₹ ${payment['total_amount'] ?? payment['total_payment'] ?? '0.00'}',
+            'Total Order amount =',
+            '₹ $totalAmount',
             isBold: true,
-            fontSize: 20,
-            valueColor: AppColors.primary,
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryRow(
+            'Payment Mode -',
+            (payment['payment_mode'] ??
+                    payment['payment_method'] ??
+                    order['payment_method'] ??
+                    "-")
+                .toString()
+                .toUpperCase(),
+          ),
+          _buildSummaryRow(
+            'Payment Status -',
+            (payment['payment_status'] ?? order['payment_status'] ?? "-")
+                .toString()
+                .toUpperCase(),
+            valueColor:
+                (payment['payment_status']?.toString().toLowerCase() == 'paid')
+                    ? Colors.green
+                    : Colors.orange,
+          ),
+          const Divider(height: 20),
+          _buildSummaryRow(
+            'Outstanding Amount =',
+            '₹ $outstanding',
+            isBold: true,
+            valueColor: outstanding > 0 ? Colors.red : Colors.green,
           ),
         ],
       ),
     );
+  }
+
+  String _formatAddress(Map<String, dynamic>? addressMap) {
+    if (addressMap == null || addressMap.isEmpty) return '-';
+
+    String address = addressMap['address_line1'] ?? addressMap['address'] ?? '';
+    // If Map doesn't have address/address_line1 directly, check shop_address or vendor_address
+    if (address.isEmpty) {
+      address = addressMap['shop_address']?.toString() ??
+          addressMap['vendor_address']?.toString() ??
+          '';
+    }
+
+    if (address.isEmpty && addressMap['landmark'] != null) {
+      address = addressMap['landmark']?.toString() ?? '';
+    }
+
+    final area = addressMap['area'];
+    if (area != null) {
+      final areaName = area is Map ? area['name'] : area.toString();
+      if (areaName != null && areaName.toString().isNotEmpty) {
+        if (address.isNotEmpty) address += ", ";
+        address += areaName.toString();
+      }
+    }
+
+    final city = addressMap['city'];
+    if (city != null) {
+      final cityName = city is Map ? city['name'] : city.toString();
+      if (cityName != null && cityName.toString().isNotEmpty) {
+        if (address.isNotEmpty) address += ", ";
+        address += cityName.toString();
+      }
+    }
+
+    if (addressMap['pincode'] != null &&
+        addressMap['pincode'].toString().isNotEmpty) {
+      if (address.isNotEmpty) address += " - ";
+      address += addressMap['pincode'].toString();
+    }
+
+    return address.isEmpty ? '-' : address;
   }
 
   Widget _buildSummaryRow(String label, String value,
@@ -521,8 +635,8 @@ class QuickPickupScreen extends GetView<QuickFlowController> {
                   if (isImagesStep) {
                     controller.goBack(); // Keep "BACK" on images step
                   } else {
-                    controller
-                        .goToMarkPending(isPickup: true); // Correctly signal Pickup
+                    controller.goToMarkPending(
+                        isPickup: true); // Correctly signal Pickup
                   }
                 },
                 style: OutlinedButton.styleFrom(

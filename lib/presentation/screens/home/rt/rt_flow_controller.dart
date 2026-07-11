@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:delivery_boy/core/constants/app_routes.dart';
 import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 import 'package:delivery_boy/data/repository/shipment_repository.dart';
 import 'package:delivery_boy/presentation/controllers/base_controller.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +39,11 @@ class RtFlowController extends BaseController {
   var currentStep = RtStep.details.obs;
   var isCancelFlow = false.obs;
 
-  // --- Success Flow State ---
+  // Details
+  var orderItems = <OrderItemModel>[].obs;
+  var phone = "".obs;
+  var lat = 0.0.obs;
+  var lng = 0.0.obs;
 
   // Scan Step
   var scannedBarcode = "".obs;
@@ -97,24 +102,26 @@ class RtFlowController extends BaseController {
 
       shipment.assignAll({
         'id': order.id,
-        'orderId': order.orderNumber ?? order.id?.toString(),
-        'barcode': order.orderNumber ?? order.trackingId,
-        'product': order.items?.isNotEmpty == true
-            ? order.items!.first.productName
-            : "Product Details N/A",
+        'orderId': order.id?.toString() ?? "-------",
+        'barcode': order.trackingId?.toString() ?? "-------",
         'name': order.customer?.name,
         'phone': order.customer?.mobile,
         'address': addressText.isNotEmpty ? addressText : "Address N/A",
-        'lat': order.deliveryAddress?.latitude,
-        'lng': order.deliveryAddress?.longitude,
       });
+
+      // Extract all items for vertical listing
+      orderItems.assignAll(order.items ?? []);
+
+      phone.value = order.customer?.mobile ?? '';
+      lat.value = order.deliveryAddress?.latitude ?? 0.0;
+      lng.value = order.deliveryAddress?.longitude ?? 0.0;
     } else if (args is Map<String, dynamic>) {
       shipment.assignAll(args);
     }
 
     // Fallback static data if necessary
-    if (shipment['barcode'] == null) shipment['barcode'] = "TKSH-RT-77210";
-    if (shipment['orderId'] == null) shipment['orderId'] = "ORD-RT-9902";
+    if (shipment['barcode'] == null) shipment['barcode'] = "-------";
+    if (shipment['orderId'] == null) shipment['orderId'] = "-------";
     if (shipment['product'] == null) {
       shipment['product'] = "Product Details N/A";
     }

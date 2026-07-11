@@ -41,26 +41,61 @@ class AppConstants {
   static const String markUndeliveredEndpoint =
       '/delivery/orders/{id}/mark-undelivered';
   static const String quickOrdersEndpoint = '/delivery/quick/orders';
-  static const String quickOrderDetailsEndpoint = '/delivery/quick/orders/details';
-  static const String quickPickupVerificationEndpoint = '/delivery/quick/pickup-verification';
-  static const String quickPickupAnswersEndpoint = '/delivery/quick/pickup-verification/answers';
-  static const String quickPickupPhotosEndpoint = '/delivery/quick/pickup-verification/photos';
-  static const String quickPickupCancelReasonsEndpoint = '/delivery/quick/pickup-cancel-reasons';
-  static const String quickPickupCancelEndpoint = '/delivery/quick/pickup-cancel';
-  static const String quickPickupCancelSendOtpEndpoint = '/delivery/quick/pickup-cancel/send-otp';
-  static const String quickPickupCancelVerifyOtpEndpoint = '/delivery/quick/pickup-cancel/verify-otp';
-  static const String quickDeliverSendOtpEndpoint = '/delivery/quick/deliver-to-customer/send-otp';
-  static const String quickDeliverVerifyOtpEndpoint = '/delivery/quick/deliver-to-customer/verify-otp';
-  static const String quickDeliverEndpoint = '/delivery/orders/{order_id}/deliver';
-  static const String quickDeliverImagesEndpoint = '/delivery/quick/deliver-to-customer/upload-images';
+  static const String quickOrderDetailsEndpoint =
+      '/delivery/quick/orders/details';
+  static const String quickPickupVerificationEndpoint =
+      '/delivery/quick/pickup-verification';
+  static const String quickPickupAnswersEndpoint =
+      '/delivery/quick/pickup-verification/answers';
+  static const String quickPickupPhotosEndpoint =
+      '/delivery/quick/pickup-verification/photos';
+  static const String quickPickupCancelReasonsEndpoint =
+      '/delivery/quick/pickup-cancel-reasons';
+  static const String quickPickupCancelEndpoint =
+      '/delivery/quick/pickup-cancel';
+  static const String quickPickupCancelSendOtpEndpoint =
+      '/delivery/quick/pickup-cancel/send-otp';
+  static const String quickPickupCancelVerifyOtpEndpoint =
+      '/delivery/quick/pickup-cancel/verify-otp';
+  static const String quickDeliverSendOtpEndpoint =
+      '/delivery/quick/deliver-to-customer/send-otp';
+  static const String quickDeliverVerifyOtpEndpoint =
+      '/delivery/quick/deliver-to-customer/verify-otp';
+  static const String quickDeliverEndpoint =
+      '/delivery/orders/{order_id}/deliver';
+  static const String quickDeliverImagesEndpoint =
+      '/delivery/quick/deliver-to-customer/upload-images';
   static const String quickCollectCashEndpoint = '/delivery/quick/collect-cash';
-  static const String quickCustomerCancelReasonsEndpoint = '/delivery/quick/customer-cancel-reasons';
-  static const String quickCustomerCancelEndpoint = '/delivery/quick/customer-cancel';
-  static const String quickCustomerCancelSendOtpEndpoint = '/delivery/quick/customer-cancel/send-otp';
-  static const String quickCustomerCancelVerifyOtpEndpoint = '/delivery/quick/customer-cancel/verify-otp';
-  static const String quickCustomerCancelImagesEndpoint = '/delivery/quick/customer-cancel/upload-images';
-  static const String quickOrdersSummaryEndpoint = '/delivery/quick/orders/summary';
-  static const String quickOrdersListByCountEndpoint = '/delivery/quick/orders/list-by-count';
+  static const String quickCustomerCancelReasonsEndpoint =
+      '/delivery/quick/customer-cancel-reasons';
+  static const String quickCustomerCancelEndpoint =
+      '/delivery/quick/customer-cancel';
+  static const String quickCustomerCancelSendOtpEndpoint =
+      '/delivery/quick/customer-cancel/send-otp';
+  static const String quickCustomerCancelVerifyOtpEndpoint =
+      '/delivery/quick/customer-cancel/verify-otp';
+  static const String quickCustomerCancelImagesEndpoint =
+      '/delivery/quick/customer-cancel/upload-images';
+  static const String quickReturnToFailedEndpoint =
+      '/delivery/quick/return-to-failed';
+  static const String quickReturnToFailedReasonsEndpoint =
+      '/delivery/quick/return-to-failed-reasons';
+  static const String quickReturnToFailedSendOtpEndpoint =
+      '/delivery/quick/return-to-failed/send-otp';
+  static const String quickReturnToFailedVerifyOtpEndpoint =
+      '/delivery/quick/return-to-failed/verify-otp';
+  static const String quickOrdersSummaryEndpoint =
+      '/delivery/quick/orders/summary';
+  static const String quickOrdersListByCountEndpoint =
+      '/delivery/quick/orders/list-by-count';
+  static const String quickReturnToSellerSendOtpEndpoint =
+      '/delivery/quick/return-to-seller/send-otp';
+  static const String quickReturnToSellerVerifyOtpEndpoint =
+      '/delivery/quick/return-to-seller/verify-otp';
+  static const String quickReturnToSellerDetailsEndpoint =
+      '/delivery/quick/return-to-seller/seller-details';
+  static const String quickReturnToSellerImagesEndpoint =
+      '/delivery/quick/return-to-seller/upload-images';
 
   // FM Endpoints
   static const String fmQuestionsEndpoint = '/delivery/fm/questions';

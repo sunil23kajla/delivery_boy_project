@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:delivery_boy/core/constants/app_routes.dart';
 import 'package:delivery_boy/core/services/session_service.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 import 'package:delivery_boy/data/repository/shipment_repository.dart';
 import 'package:delivery_boy/presentation/controllers/base_controller.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ class RvpFlowController extends BaseController {
   var isCancelFlow = false.obs;
   var isUploading = false.obs;
   var isVerifying = false.obs;
+  var orderItems = <OrderItemModel>[].obs;
 
   // --- Step 1: Details ---
   final returnReasonController = TextEditingController();
@@ -89,24 +91,25 @@ class RvpFlowController extends BaseController {
       final order = args;
       shipment.assignAll({
         'id': order.id,
-        'orderId': order.orderNumber ?? order.id?.toString(),
-        'barcode': order.orderNumber,
+        'orderId': order.id?.toString() ?? "-------",
+        'barcode': order.trackingId?.toString() ?? "-------",
         'product': order.items?.isNotEmpty == true
             ? order.items!.first.productName
             : "Product Details N/A",
       });
       // Extract from RVP Data in model if present
       if (order.rvpData != null) {
-        returnId.value = order.rvpData?['id']?.toString() ?? 
-                         order.rvpData?['return_id']?.toString();
+        returnId.value = order.rvpData?['id']?.toString() ??
+            order.rvpData?['return_id']?.toString();
         debugPrint("Extracted Return ID from OrderModel: ${returnId.value}");
       }
     } else if (args is Map<String, dynamic>) {
       shipment.assignAll(args);
       if (args.containsKey('return_id')) {
         returnId.value = args['return_id']?.toString();
-      } else if (args.containsKey('id') && 
-                 (args['order_type']?.toString().toLowerCase().contains('rvp') == true)) {
+      } else if (args.containsKey('id') &&
+          (args['order_type']?.toString().toLowerCase().contains('rvp') ==
+              true)) {
         returnId.value = args['id']?.toString();
       }
     }
@@ -541,19 +544,19 @@ class RvpFlowController extends BaseController {
         final returns = data['returns'] as List?;
         final items = data['items'] as List?;
         debugPrint("🔍 [DEBUG] full returns list: $returns");
-        debugPrint("🔍 [DEBUG] first item data: ${items?.isNotEmpty == true ? items!.first : 'N/A'}");
-        
-        Map<String, dynamic>? firstItem =
-            items?.isNotEmpty == true ? items!.first : null;
+        debugPrint(
+            "🔍 [DEBUG] first item data: ${items?.isNotEmpty == true ? items!.first : 'N/A'}");
+
+        Map<String, dynamic>? firstItem = items?.isNotEmpty == true
+            ? items!.first as Map<String, dynamic>?
+            : null;
         Map<String, dynamic>? rvpReturnData;
 
         // Update shipment map for the UI
         final Map<String, dynamic> updatedShipment = Map.from(shipment);
-        updatedShipment['barcode'] = order['tracking_id'] ??
-            shipment['barcode'] ??
-            order['order_number'];
-        updatedShipment['orderId'] =
-            order['order_number'] ?? shipment['orderId'];
+        updatedShipment['barcode'] =
+            order['tracking_id']?.toString() ?? "-------";
+        updatedShipment['orderId'] = order['id']?.toString() ?? "-------";
         updatedShipment['name'] = customer['name'] ?? "-------";
 
         // Build address string
@@ -574,28 +577,36 @@ class RvpFlowController extends BaseController {
         updatedShipment['lat'] = address['latitude'];
         updatedShipment['lng'] = address['longitude'];
 
-        if (firstItem != null) {
-          // Construct rich product name
-          String pName = firstItem['product_name'] ?? "-------";
-          final variantAttrs = firstItem['variant_attributes'] as List?;
-          if (variantAttrs != null && variantAttrs.isNotEmpty) {
-            final attrs = variantAttrs
-                .map((e) => e['attribute_value'])
-                .where((v) => v != null)
-                .join(", ");
-            if (attrs.isNotEmpty) {
-              pName = "$pName ($attrs)";
+        // --- NEW: Populate orderItems list and extract first product name ---
+        if (items != null) {
+          orderItems
+              .assignAll(items.map((e) => OrderItemModel.fromJson(e)).toList());
+
+          if (items.isNotEmpty) {
+            final first = items.first;
+            String pName = first['product_name'] ?? "-------";
+            final variantAttrs = first['variant_attributes'] as List?;
+            if (variantAttrs != null && variantAttrs.isNotEmpty) {
+              final attrs = variantAttrs
+                  .map((e) => e['attribute_value'])
+                  .where((v) => v != null)
+                  .join(", ");
+              if (attrs.isNotEmpty) {
+                pName = "$pName ($attrs)";
+              }
             }
+            updatedShipment['product'] = pName;
           }
-          updatedShipment['product'] = pName;
         }
         // --- Extraction Strategy for Return ID ---
-        
+
         // 1. Check in rvp/rvp_return at top level
         final rvpTop = data['rvp'] ?? data['rvp_return'];
         if (rvpTop != null) {
-          returnId.value = rvpTop['id']?.toString() ?? rvpTop['return_id']?.toString();
-          debugPrint("Found Return ID in top-level rvp block: ${returnId.value}");
+          returnId.value =
+              rvpTop['id']?.toString() ?? rvpTop['return_id']?.toString();
+          debugPrint(
+              "Found Return ID in top-level rvp block: ${returnId.value}");
         }
 
         // 2. Check in items[0]['rvp_return'] (Existing logic)
@@ -603,7 +614,8 @@ class RvpFlowController extends BaseController {
           rvpReturnData = firstItem['rvp_return'];
           if (rvpReturnData != null) {
             returnId.value = rvpReturnData['id']?.toString();
-            debugPrint("Found Return ID in first item rvp_return: ${returnId.value}");
+            debugPrint(
+                "Found Return ID in first item rvp_return: ${returnId.value}");
           }
         }
 
@@ -617,10 +629,13 @@ class RvpFlowController extends BaseController {
         // 4. Final Fallback: If it's an RVP order, use the order ID itself if nothing else matches
         // Some systems use the same ID or expect it as a fallback
         if (returnId.value == null) {
-          final isRvpType = order['order_type']?.toString().toLowerCase().contains('rvp') == true;
+          final isRvpType =
+              order['order_type']?.toString().toLowerCase().contains('rvp') ==
+                  true;
           if (isRvpType) {
             returnId.value = order['id']?.toString();
-            debugPrint("Fallback: Using Order ID as Return ID: ${returnId.value}");
+            debugPrint(
+                "Fallback: Using Order ID as Return ID: ${returnId.value}");
           }
         }
 

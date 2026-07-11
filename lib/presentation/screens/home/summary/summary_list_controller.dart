@@ -12,6 +12,7 @@ class SummaryDetailController extends BaseController {
   final rxIsQuick = false.obs;
   final rxShipment = Rxn<OrderModel>();
   late OrderModel initialShipment;
+  String? listStatus;
 
   @override
   void onInit() {
@@ -20,6 +21,7 @@ class SummaryDetailController extends BaseController {
     if (args is Map) {
       initialShipment = args['shipment'] as OrderModel;
       rxIsQuick.value = args['isQuick'] as bool? ?? false;
+      listStatus = args['listStatus']?.toString();
     } else {
       initialShipment = args as OrderModel;
       rxIsQuick.value = false;
@@ -57,14 +59,23 @@ class SummaryDetailController extends BaseController {
         }
 
         // Add other root-level objects that OrderModel expects
-        if (data['customer'] != null) flattenedData['customer'] = data['customer'];
+        if (data['customer'] != null)
+          flattenedData['customer'] = data['customer'];
         if (data['vendor'] != null) flattenedData['vendor'] = data['vendor'];
-        if (data['delivery_address'] != null) flattenedData['delivery_address'] = data['delivery_address'];
+        if (data['delivery_address'] != null)
+          flattenedData['delivery_address'] = data['delivery_address'];
         if (data['items'] != null) flattenedData['items'] = data['items'];
-        if (data['payments'] != null) flattenedData['payments'] = data['payments'];
-        
+        if (data['payments'] != null)
+          flattenedData['payments'] = data['payments'];
+
         // Include any other root-level amount fields
-        ['total_payable', 'payable_amount', 'grand_total', 'amount', 'total_amount'].forEach((field) {
+        [
+          'total_payable',
+          'payable_amount',
+          'grand_total',
+          'amount',
+          'total_amount'
+        ].forEach((field) {
           if (data[field] != null) flattenedData[field] = data[field];
         });
 
@@ -161,7 +172,8 @@ class SummaryListController extends BaseController {
 
         shipments.assignAll(isQuick
             ? list.map((e) => OrderModel.fromJson(e)).toList()
-            : _filterByStatus(list.map((e) => OrderModel.fromJson(e)).toList()));
+            : _filterByStatus(
+                list.map((e) => OrderModel.fromJson(e)).toList()));
       }
       hideLoading();
     } catch (e) {
@@ -241,7 +253,8 @@ class SummaryListController extends BaseController {
 
         shipments.addAll(isQuick
             ? list.map((e) => OrderModel.fromJson(e)).toList()
-            : _filterByStatus(list.map((e) => OrderModel.fromJson(e)).toList()));
+            : _filterByStatus(
+                list.map((e) => OrderModel.fromJson(e)).toList()));
       }
       isFetchingMore.value = false;
     } catch (e) {

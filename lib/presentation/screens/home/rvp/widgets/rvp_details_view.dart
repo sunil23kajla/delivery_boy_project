@@ -1,4 +1,5 @@
 import 'package:delivery_boy/core/constants/app_colors.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../../core/utils/external_actions.dart';
@@ -24,8 +25,15 @@ class RvpDetailsView extends GetView<RvpFlowController> {
                 _buildIdentifiersCard(),
                 const SizedBox(height: 15),
 
-                // Section 2: Product Highlight Card (Highly Visible)
-                _buildProductHighlightCard(),
+                // Section 2: Product Highlight Cards (DYNAMIC LIST)
+                Obx(() => Column(
+                      children: controller.orderItems.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildProductHighlightCard(item),
+                        );
+                      }).toList(),
+                    )),
                 const SizedBox(height: 15),
 
                 // Section 3: Customer Card (User Info & Actions)
@@ -222,7 +230,11 @@ class RvpDetailsView extends GetView<RvpFlowController> {
     );
   }
 
-  Widget _buildProductHighlightCard() {
+  Widget _buildProductHighlightCard(OrderItemModel item) {
+    final imageUrl = (item.productImages != null && item.productImages!.isNotEmpty)
+        ? item.productImages!.first.imageUrl
+        : null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -242,27 +254,24 @@ class RvpDetailsView extends GetView<RvpFlowController> {
       child: Row(
         children: [
           // Product Image
-          Obx(() {
-            final imageUrl = controller.applicationImages.isNotEmpty
-                ? controller.applicationImages.first
-                : null;
-            return Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(15),
-                child: imageUrl != null
-                    ? Image.network(imageUrl, fit: BoxFit.cover)
-                    : const Icon(Icons.shopping_bag,
-                        color: Colors.white, size: 40),
-              ),
-            );
-          }),
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
+              image: imageUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: imageUrl == null
+                ? const Icon(Icons.shopping_bag, color: Colors.white, size: 35)
+                : null,
+          ),
           const SizedBox(width: 15),
           // Product Info
           Expanded(
@@ -279,15 +288,26 @@ class RvpDetailsView extends GetView<RvpFlowController> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Obx(() => Text(
-                      controller.shipment['product']?.toString() ?? "-------",
+                Text(
+                  item.productName ?? "Product Details",
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1.2,
+                  ),
+                ),
+                if (item.quantity != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      "Qty: ${item.quantity}",
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.2,
+                        fontSize: 11,
+                        color: Colors.white60,
                       ),
-                    )),
+                    ),
+                  ),
               ],
             ),
           ),

@@ -13,12 +13,22 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
       final shipment =
           controller.rxShipment.value ?? controller.initialShipment;
 
-      // Get actual status from orderStatus, with fallback to initial status badge
-      final responseStatus = shipment.orderStatus?.toUpperCase();
-      final displayStatus = responseStatus ?? 'DISPATCH';
+      final uiOrderType = (shipment.orderType ?? '').toUpperCase();
+      final category = ['RVP', 'REVERSE', 'REVERSE_PICKUP'].contains(uiOrderType)
+          ? 'RVP'
+          : ['RT', 'RETURN'].contains(uiOrderType)
+              ? 'RT'
+              : ['FM', 'FIRST_MILE', 'FIRSTMILE'].contains(uiOrderType)
+                  ? 'FM'
+                  : ['NORMAL', 'FWD', 'FORWARD'].contains(uiOrderType)
+                      ? 'FWD'
+                      : (uiOrderType.isNotEmpty ? uiOrderType : 'FWD');
+
+      final baseStatus = controller.listStatus ?? shipment.orderStatus?.toUpperCase() ?? 'DISPATCH';
+      final displayStatus = '$category - $baseStatus';
 
       Color statusColor;
-      switch (displayStatus) {
+      switch (baseStatus) {
         case 'SUCCESS':
         case 'DELIVERED':
           statusColor = Colors.green;
@@ -105,6 +115,57 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
                 ),
               ),
             ),
+            if (controller.listStatus == 'FAILED' || controller.listStatus == 'CANCELLED' || controller.listStatus == 'UNDELIVERED')
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      final uiOrderType = (shipment.orderType ?? '').toUpperCase();
+                      final category = ['RVP', 'REVERSE', 'REVERSE_PICKUP'].contains(uiOrderType)
+                          ? 'RVP'
+                          : ['RT', 'RETURN'].contains(uiOrderType)
+                              ? 'RT'
+                              : ['FM', 'FIRST_MILE', 'FIRSTMILE'].contains(uiOrderType)
+                                  ? 'FM'
+                                  : 'FWD';
+                      
+                      switch (category) {
+                        case 'RVP':
+                          Get.toNamed(AppRoutes.rvpFlow, arguments: shipment);
+                          break;
+                        case 'RT':
+                          Get.toNamed(AppRoutes.rtFlow, arguments: shipment);
+                          break;
+                        case 'FM':
+                          Get.toNamed(AppRoutes.fmFlow, arguments: shipment);
+                          break;
+                        case 'FWD':
+                        default:
+                          Get.toNamed(AppRoutes.orderDetails, arguments: shipment);
+                          break;
+                      }
+                    },
+                    child: const Text(
+                      "UPDATE STATUS",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       );
@@ -350,14 +411,6 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            "₹${(item.itemTotal ?? 0.0).toStringAsFixed(2)}",
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: AppColors.primary),
-          ),
         ],
       ),
     );
@@ -395,6 +448,67 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
   }
 
   Widget _buildPaymentCard(OrderModel shipment) {
+    // Only show detailed summary for FWD orders as requested
+    final isFwd = shipment.orderType?.toLowerCase() == 'fwd';
+
+    if (!isFwd) {
+      // Return simpler summary for RVP/Others
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 15,
+                offset: const Offset(0, 5)),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildPaymentRow("Subtotal", shipment.itemsTotal ?? 0.0),
+            _buildPaymentRow("Delivery Fee", shipment.deliveryCharge ?? 0.0),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(height: 1, thickness: 0.5),
+            ),
+            _buildPaymentRow("Total", shipment.totalPayable ?? 0.0,
+                isBold: true),
+          ],
+        ),
+      );
+    }
+
+    final isCod = (shipment.paymentMethod ?? '').toLowerCase() == 'cod';
+    final itemsTotal = shipment.itemsTotal ?? 0.0;
+    final deliveryCharge = shipment.deliveryCharge ?? 0.0;
+    final totalAmount = shipment.totalPayable ?? 0.0;
+
+    // Calculate other charges from the payments list
+    double packagingFees = 0.0;
+    double platformFees = 0.0;
+    double otherCharges = 0.0;
+    double discount = 0.0;
+
+    final allOtherCharges =
+        shipment.payments?.expand((p) => p.otherCharges ?? []).toList() ?? [];
+
+    for (var charge in allOtherCharges) {
+      if (charge.isDiscount == true) {
+        discount += (charge.amount ?? 0.0);
+      } else if (charge.type == 'packaging') {
+        packagingFees += (charge.amount ?? 0.0);
+      } else if (charge.type == 'platform') {
+        platformFees += (charge.amount ?? 0.0);
+      } else {
+        otherCharges += (charge.amount ?? 0.0);
+      }
+    }
+
+    final outstanding = isCod ? totalAmount : 0.0;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -410,30 +524,94 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
       ),
       child: Column(
         children: [
-          _buildPaymentRow("Subtotal", shipment.itemsTotal ?? 0.0),
-          _buildPaymentRow("Delivery Fee", shipment.deliveryCharge ?? 0.0),
+          _buildPaymentRow(
+            "Payment Mode =",
+            0,
+            customValue: isCod ? 'COD' : 'Prepaid',
+          ),
+          _buildPaymentRow(
+            "Order Amount =",
+            0,
+            customValue: isCod ? '₹ $totalAmount' : 'Paid',
+          ),
+          if (controller.listStatus == 'FAILED' || controller.listStatus == 'CANCELLED' || controller.listStatus == 'UNDELIVERED') ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Divider(height: 1, thickness: 0.5),
+            ),
+            _buildPaymentRow(
+              "Cancel Reason =",
+              0,
+              customValue: shipment.cancelReason ?? 'Not Available',
+              color: Colors.red,
+            ),
+          ],
+          /*
+          _buildPaymentRow("Order Value =", itemsTotal),
+          _buildPaymentRow("Delivery charges =", deliveryCharge),
+          _buildPaymentRow("Packaging & handling Fees =", packagingFees),
+          _buildPaymentRow("Platform Fees =", platformFees),
+          _buildPaymentRow("Other charges =", otherCharges),
+          _buildPaymentRow("Discount =", -discount, color: Colors.red),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1, thickness: 0.5),
           ),
-          _buildPaymentRow(controller.rxIsQuick.value ? "Total" : "Grand Total",
-              shipment.totalPayable ?? 0.0,
-              isBold: true),
-          if (!controller.rxIsQuick.value) ...[
-            _buildPaymentRow("Amount Paid", shipment.totalPaid ?? 0.0,
-                color: Colors.green),
-            _buildPaymentRow("Outstanding", shipment.totalDue ?? 0.0,
-                color: Colors.red, isBold: true),
+          _buildPaymentRow("Total Order amount =", totalAmount,
+              isBold: true, fontSize: 16),
+          const SizedBox(height: 12),
+          _buildPaymentRow(
+            "Payment Mode -",
+            0,
+            customValue: (shipment.paymentMethod != null)
+                ? shipment.paymentMethod!.toUpperCase()
+                : '-',
+          ),
+          _buildPaymentRow(
+            "Payment Status -",
+            0,
+            customValue: (shipment.paymentStatus != null)
+                ? shipment.paymentStatus!.toUpperCase()
+                : '-',
+            color: (shipment.paymentStatus?.toLowerCase() == 'paid' ||
+                    shipment.paymentStatus?.toLowerCase() == 'success')
+                ? Colors.green
+                : Colors.blueGrey,
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1, thickness: 0.5),
+          ),
+          _buildPaymentRow("Outstanding Amount =", outstanding,
+              isBold: true,
+              fontSize: 16,
+              color: outstanding > 0 ? Colors.red : Colors.green),
+          if (isCod) ...[
+            const SizedBox(height: 20),
+            Center(
+              child: Text(
+                "Delivery Time payment Mode = ${(shipment.paymentMethod ?? 'COD').toUpperCase()}",
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ],
+          */
         ],
       ),
     );
   }
 
   Widget _buildPaymentRow(String label, double value,
-      {bool isBold = false, Color? color}) {
+      {bool isBold = false,
+      Color? color,
+      double fontSize = 14,
+      String? customValue}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -442,16 +620,16 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
             style: TextStyle(
               color: isBold ? AppColors.textPrimary : AppColors.textSecondary,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              fontSize: isBold ? 15 : 14,
+              fontSize: fontSize,
             ),
           ),
           Text(
-            "₹${value.toStringAsFixed(2)}",
+            customValue ?? "₹${value.toStringAsFixed(value % 1 == 0 ? 0 : 2)}",
             style: TextStyle(
               color: color ??
                   (isBold ? AppColors.textPrimary : AppColors.textSecondary),
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              fontSize: isBold ? 16 : 14,
+              fontSize: fontSize + 1,
             ),
           ),
         ],

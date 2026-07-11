@@ -1,5 +1,6 @@
 import 'package:delivery_boy/core/constants/app_colors.dart';
 import 'package:delivery_boy/core/utils/external_actions.dart';
+import 'package:delivery_boy/data/models/order_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -22,7 +23,17 @@ class FmDetailsView extends GetView<FmFlowController> {
               children: [
                 _buildIdentifiersCard(),
                 const SizedBox(height: 15),
-                _buildProductHighlightCard(width),
+                
+                // 1. DYNAMIC PURPLE HIGHLIGHT CARDS (Repeats for each item)
+                Obx(() => Column(
+                      children: controller.orderItems.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildPurpleProductCard(item, width),
+                        );
+                      }).toList(),
+                    )),
+
                 const SizedBox(height: 15),
                 _buildCustomerCard(),
                 const SizedBox(height: 25),
@@ -73,6 +84,90 @@ class FmDetailsView extends GetView<FmFlowController> {
     );
   }
 
+  Widget _buildPurpleProductCard(OrderItemModel item, double width) {
+    final imageUrl = (item.productImages != null && item.productImages!.isNotEmpty)
+        ? item.productImages!.first.imageUrl
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.purple.shade300, Colors.purple.shade200],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.purple.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 8))
+        ],
+      ),
+      child: Row(
+        children: [
+          // Image / Icon Section
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(15),
+              image: imageUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: imageUrl == null
+                ? const Icon(Icons.shopping_bag, color: Colors.white, size: 30)
+                : null,
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "PRODUCT TO PICKUP",
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.productName ?? "Product",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1.2,
+                  ),
+                ),
+                if (item.quantity != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      "Qty: ${item.quantity}",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white60,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildIdentifiersCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -89,14 +184,14 @@ class FmDetailsView extends GetView<FmFlowController> {
       ),
       child: Column(
         children: [
-          _buildCardRow("Tracking ID", controller.shipment['barcode'] ?? "---",
-              Icons.qr_code),
+          _buildCardRow("Tracking ID",
+              controller.shipment['barcode']?.toString() ?? "-------", Icons.qr_code),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(height: 1),
           ),
-          _buildCardRow(
-              "Order ID", controller.shipment['orderId'] ?? "---", Icons.tag),
+          _buildCardRow("Order ID",
+              controller.shipment['orderId']?.toString() ?? "-------", Icons.tag),
         ],
       ),
     );
@@ -119,67 +214,6 @@ class FmDetailsView extends GetView<FmFlowController> {
                 fontSize: 13,
                 fontWeight: FontWeight.bold)),
       ],
-    );
-  }
-
-  Widget _buildProductHighlightCard(double width) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple.shade300, Colors.purple.shade200],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.purple.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 8))
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child:
-                const Icon(Icons.shopping_bag, color: Colors.white, size: 30),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "PRODUCT TO PICKUP",
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white70,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Obx(() => Text(
-                      controller.product.value,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.2,
-                      ),
-                    )),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

@@ -27,7 +27,7 @@ class RtEvidenceView extends GetView<RtFlowController> {
                   children: [
                     _buildImageSlot("FRONT", 0, required: true),
                     _buildImageSlot("BACK", 1, required: true),
-                    _buildImageSlot("CUSTMER", 2, required: false),
+                    _buildImageSlot("SELLER", 2, required: false),
                   ],
                 ),
                 const SizedBox(height: 40),
@@ -36,7 +36,7 @@ class RtEvidenceView extends GetView<RtFlowController> {
                         color: Colors.red,
                         fontWeight: FontWeight.bold,
                         fontSize: 12)),
-                const Text("OPTIONAL: CUSTMER",
+                const Text("OPTIONAL: SELLER",
                     style: TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,

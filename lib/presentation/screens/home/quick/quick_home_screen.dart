@@ -20,57 +20,58 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
       child: LoadingOverlay(
         isLoading: controller.isLoadingRx,
         child: Obx(() => Scaffold(
-          backgroundColor: const Color(0xFFF5F7FB),
-          appBar: controller.selectedTabIndex.value == 1
-              ? AppBar(
-                  backgroundColor: const Color(0xFF0D47A1),
-                  elevation: 0,
-                  centerTitle: true,
-                  title: const Text(
-                    "Order Summary",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
-                  ),
-                )
-              : null,
-          body: Column(
-            children: [
-              if (controller.selectedTabIndex.value == 0) _buildHeader(context),
-              if (controller.selectedTabIndex.value == 0) ...[
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildSearchBar(),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () => controller.fetchOrders(),
-                    child: Obx(() {
-                      if (controller.filteredOrders.isEmpty) {
-                        return _buildEmptyState();
-                      }
-                      return ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        itemCount: controller.filteredOrders.length,
-                        itemBuilder: (context, index) {
-                          final order = controller.filteredOrders[index];
-                          return _buildOrderCard(order);
-                        },
-                      );
-                    }),
-                  ),
-                ),
-              ] else ...[
-                const Expanded(child: QuickSummaryView()),
-              ],
-            ],
-          ),
-          bottomNavigationBar: _buildBottomNavigationBar(),
-        )),
+              backgroundColor: const Color(0xFFF5F7FB),
+              appBar: controller.selectedTabIndex.value == 1
+                  ? AppBar(
+                      backgroundColor: const Color(0xFF0D47A1),
+                      elevation: 0,
+                      centerTitle: true,
+                      title: const Text(
+                        "Order Summary",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  : null,
+              body: Column(
+                children: [
+                  if (controller.selectedTabIndex.value == 0)
+                    _buildHeader(context),
+                  if (controller.selectedTabIndex.value == 0) ...[
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildSearchBar(),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () => controller.fetchOrders(),
+                        child: Obx(() {
+                          if (controller.filteredOrders.isEmpty) {
+                            return _buildEmptyState();
+                          }
+                          return ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            itemCount: controller.filteredOrders.length,
+                            itemBuilder: (context, index) {
+                              final order = controller.filteredOrders[index];
+                              return _buildOrderCard(order);
+                            },
+                          );
+                        }),
+                      ),
+                    ),
+                  ] else ...[
+                    const Expanded(child: QuickSummaryView()),
+                  ],
+                ],
+              ),
+              bottomNavigationBar: _buildBottomNavigationBar(),
+            )),
       ),
     );
   }
@@ -98,25 +99,25 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Obx(() => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      "Hello, ${controller.userProfile.value?.name?.split(' ').first ?? 'Quick Boy'} 👋",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(
-                    _getFormattedDate(),
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              )),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          "Hello, ${controller.userProfile.value?.name?.split(' ').first ?? 'Quick Boy'} 👋",
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getFormattedDate(),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )),
               GestureDetector(
                 onTap: () => controller.goToProfile(),
                 child: Container(
@@ -125,7 +126,8 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 28),
+                  child:
+                      const Icon(Icons.person, color: Colors.white, size: 28),
                 ),
               )
             ],
@@ -136,7 +138,8 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
             children: [
               Obx(() => _StatItem(
                   label: "TOTAL",
-                  value: controller.totalOrders.value.toString().padLeft(2, '0'),
+                  value:
+                      controller.totalOrders.value.toString().padLeft(2, '0'),
                   color: Colors.white)),
               Obx(() => _StatItem(
                   label: "SUCCESS",
@@ -145,7 +148,8 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
                   color: const Color(0xFF69F0AE))),
               Obx(() => _StatItem(
                   label: "FAILED",
-                  value: controller.totalFailed.value.toString().padLeft(2, '0'),
+                  value:
+                      controller.totalFailed.value.toString().padLeft(2, '0'),
                   color: const Color(0xFFFFD180))),
             ],
           )
@@ -196,11 +200,27 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
   String _getFormattedDate() {
     final now = DateTime.now();
     final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     final days = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     return "${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}";
   }
@@ -209,36 +229,47 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
     final vendor = order['vendor'] as Map<String, dynamic>?;
 
     final name = vendor?['name'] ?? 'Vendor/Customer';
-    final orderNumber = order['order_number'] ?? '-';
+    final orderNumber = order['tracking_id'] ?? '-';
     final address = vendor?['address'] ?? 'Address not available';
     final phone = vendor?['mobile'] ?? '';
 
     final paymentData = order['payment'] ?? {};
     final orderData = order['order'] ?? {};
-    final paymentStatus = (order['payment_status'] ?? 
-                    orderData['payment_status'] ?? 
-                    paymentData['payment_status'] ?? 
-                    '').toString().trim().toLowerCase();
-    
+    final paymentStatus = (order['payment_status'] ??
+            orderData['payment_status'] ??
+            paymentData['payment_status'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase();
+
     bool isCod = false;
-    if (paymentStatus == 'paid' || paymentStatus == 'success' || paymentStatus == 'online') {
-      isCod = false; 
+    if (paymentStatus == 'paid' ||
+        paymentStatus == 'success' ||
+        paymentStatus == 'online') {
+      isCod = false;
     } else {
-        final method = (order['payment_method'] ?? 
-                        orderData['payment_method'] ?? 
-                        paymentData['payment_method'] ?? 
-                        '').toString().trim().toLowerCase();
-        if (method.contains('online') || 
-            method.contains('razorpay') || 
-            method.contains('prepaid') || 
-            method.contains('upi')) {
-            isCod = false;
-        } else {
-            isCod = method == 'cod' || method.contains('cash');
-        }
+      final method = (order['payment_method'] ??
+              orderData['payment_method'] ??
+              paymentData['payment_method'] ??
+              '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      if (method.contains('online') ||
+          method.contains('razorpay') ||
+          method.contains('prepaid') ||
+          method.contains('upi')) {
+        isCod = false;
+      } else {
+        isCod = method == 'cod' || method.contains('cash');
+      }
     }
-    
-    final paymentAmount = order['total_payable'] ?? order['total_amount'] ?? paymentData['amount'] ?? '0.00';
+
+    final paymentAmount = order['total_payable'] ??
+        order['total_amount'] ??
+        paymentData['amount'] ??
+        '0.00';
     final paymentType = isCod ? "COD" : "PREPAID";
 
     return InkWell(
@@ -432,8 +463,10 @@ class QuickHomeScreen extends GetView<QuickFlowController> {
         onTap: (index) => controller.changeTab(index),
         selectedItemColor: const Color(0xFF0D47A1),
         unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+        selectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        unselectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
@@ -467,7 +500,10 @@ class _StatItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w500)),
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(

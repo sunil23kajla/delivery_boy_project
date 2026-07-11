@@ -65,6 +65,7 @@ class SummaryListScreen extends GetView<SummaryListController> {
                       arguments: {
                         'shipment': shipment,
                         'isQuick': controller.isQuick,
+                        'listStatus': controller.status,
                       }),
                   child: ShipmentCard(
                     shipment: shipment, 
