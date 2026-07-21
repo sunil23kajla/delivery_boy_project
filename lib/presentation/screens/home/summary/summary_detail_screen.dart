@@ -344,9 +344,9 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
               ),
               if (shipment.deliveryTimePaymentMode != null && shipment.deliveryTimePaymentMode!.isNotEmpty)
                 _buildSummaryRow(
-                  'Paid Via =',
+                  'Delivery time payment mode =',
                   shipment.deliveryTimePaymentMode!.toUpperCase(),
-                  valueColor: Colors.green,
+                  valueColor: Colors.black87,
                 ),
               if (controller.listStatus == 'FAILED' || controller.listStatus == 'CANCELLED' || controller.listStatus == 'UNDELIVERED') ...[
                 const Padding(
