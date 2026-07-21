@@ -233,6 +233,12 @@ class OrderDetailsScreen extends GetView<OrderDetailsController> {
                 'Order Amount =',
                 isCod ? '₹ $totalAmount' : 'Paid',
               ),
+              if (shipment.deliveryTimePaymentMode != null && shipment.deliveryTimePaymentMode!.isNotEmpty)
+                _buildSummaryRow(
+                  'Paid Via =',
+                  shipment.deliveryTimePaymentMode!.toUpperCase(),
+                  valueColor: Colors.green,
+                ),
               /*
               _buildSummaryRow('Order Value =', '₹ $itemsTotal'),
               _buildSummaryRow('Delivery charges =', '₹ $deliveryCharge'),

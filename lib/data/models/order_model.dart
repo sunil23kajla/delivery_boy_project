@@ -14,6 +14,7 @@ class OrderModel {
   final String? paymentStatus;
   final double? totalAmount;
   final String? createdAt;
+  final String? deliveryTimePaymentMode;
   final String? cancelReason;
   final String? confirmedAt;
   final String? deliveredAt;
@@ -49,6 +50,7 @@ class OrderModel {
     this.createdAt,
     this.confirmedAt,
     this.deliveredAt,
+    this.deliveryTimePaymentMode,
     this.cancelReason,
     this.customer,
     this.vendor,
@@ -109,6 +111,7 @@ class OrderModel {
       createdAt: json['created_at'],
       confirmedAt: json['confirmed_at'],
       deliveredAt: json['delivered_at'],
+      deliveryTimePaymentMode: json['delivery_time_payment_mode']?.toString(),
       cancelReason: json['cancel_reason']?.toString() ?? json['reason']?.toString() ?? json['remarks']?.toString(),
       customer: json['customer'] != null
           ? CustomerModel.fromJson(json['customer'])

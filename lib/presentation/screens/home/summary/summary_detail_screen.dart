@@ -342,6 +342,12 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
                 'Order Amount =',
                 isCod ? '₹ $totalAmount' : 'Paid',
               ),
+              if (shipment.deliveryTimePaymentMode != null && shipment.deliveryTimePaymentMode!.isNotEmpty)
+                _buildSummaryRow(
+                  'Paid Via =',
+                  shipment.deliveryTimePaymentMode!.toUpperCase(),
+                  valueColor: Colors.green,
+                ),
               if (controller.listStatus == 'FAILED' || controller.listStatus == 'CANCELLED' || controller.listStatus == 'UNDELIVERED') ...[
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
