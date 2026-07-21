@@ -99,8 +99,8 @@ class OrderModel {
           json['sla_status'] == 'breached' || json['is_sla_breached'] == true,
       slaStatus: json['sla_status'],
       trackingId: json['tracking_id']?.toString(),
-      paymentMethod: json['payment_method'],
-      paymentStatus: json['payment_status'],
+      paymentMethod: json['payment_method']?.toString() ?? json['payment_type']?.toString(),
+      paymentStatus: json['payment_status']?.toString(),
       totalAmount: _parseFloatOrNum(json['total_payable'] ??
           json['payable_amount'] ??
           json['total_amount'] ??

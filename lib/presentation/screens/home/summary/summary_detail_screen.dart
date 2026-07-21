@@ -102,7 +102,7 @@ class SummaryDetailScreen extends GetView<SummaryDetailController> {
                 ),
               ),
             ),
-            if (controller.listStatus == 'FAILED' || controller.listStatus == 'CANCELLED' || controller.listStatus == 'UNDELIVERED')
+            if (['FAILED', 'CANCELLED', 'UNDELIVERED', 'DISPATCH', 'PENDING'].contains(controller.listStatus))
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: SizedBox(
